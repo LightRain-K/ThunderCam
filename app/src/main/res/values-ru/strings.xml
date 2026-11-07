@@ -1,0 +1,366 @@
+<resources>
+    <string name="camera_permission_dialog_title">Требуется доступ к камере</string>
+    <string name="camera_permission_dialog_message">
+        Приложению нужен доступ к камере для работы. Пожалуйста, выдайте разрешение через Настройки, чтобы пользоваться приложением.
+    </string>
+
+    <string name="audio_permission_dialog_title">Требуется доступ к микрофону</string>
+    <string name="audio_permission_dialog_message">Приложению нужен доступ к микрофону, чтобы записывать видео со звуком. Выдайте разрешение через Настройки, чтобы продолжить. Если звук не нужен, его можно просто отключить (и включить позже в настройках).</string>
+
+    <string name="location_permission_dialog_title">Требуется доступ к геопозиции</string>
+    <string name="location_permission_dialog_message">
+        Приложению нужен доступ к геопозиции для геометок. Выдайте разрешение через Настройки, чтобы пользоваться приложением.
+    </string>
+
+    <string name="flip_camera">Переключить камеру</string>
+    <string name="loading_camera">Загрузка камеры</string>
+    <string name="flash_mode">Режим вспышки</string>
+    <string name="start_value_timer">00:00</string>
+    <string name="zoom">Зум</string>
+    <string name="exposure_compensation">Компенсация экспозиции</string>
+    <string name="geo_tagging">Геометки</string>
+    <string name="torch">Фонарик</string>
+    <string name="scan_result">Результат сканирования</string>
+    <string name="share_qr_text">Поделиться текстом QR</string>
+    <string name="open_with">Открыть через</string>
+    <string name="copy_to_clipboard">Скопировать в буфер</string>
+    <string name="retake">Переснять</string>
+    <string name="capture">Снять</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="open_gallery">Открыть галерею</string>
+    <string name="pause_recording">Приостановить запись</string>
+    <string name="resume_recording">Продолжить запись</string>
+    <string name="start_recording">Начать запись</string>
+    <string name="stop_recording">Остановить запись</string>
+    <string name="turn_torch_on">Включить фонарик</string>
+    <string name="turn_torch_off">Выключить фонарик</string>
+    <string name="mute_audio">Выключить звук</string>
+    <string name="unmute_audio">Включить звук</string>
+    <!-- The flash and grid controls cycle through several states rather than toggling between
+          two, so their labels name the state they are currently in; naming the next action
+          instead would leave a screen reader user unable to tell where in the cycle they are. -->
+    <string name="flash_off">Вспышка выкл</string>
+    <string name="flash_on">Вспышка вкл</string>
+    <string name="flash_auto">Вспышка авто</string>
+    <string name="grid_off">Сетка выкл</string>
+    <string name="grid_3x3">Сетка 3 на 3</string>
+    <string name="grid_4x4">Сетка 4 на 4</string>
+    <string name="grid_golden_ratio">Сетка золотое сечение</string>
+    <string name="scan_all_formats">Сканировать все форматы кодов</string>
+    <string name="stop_scanning_all_formats">Не сканировать все форматы</string>
+    <string name="play_preview">Смотреть превью</string>
+    <string name="aspect_ratio">Соотношение сторон</string>
+    <string name="include_audio">Записывать звук</string>
+    <string name="enable_eis">Включить EIS</string>
+    <string name="video_quality">Качество видео</string>
+    <string name="optimize_for">Оптимизировать</string>
+    <string name="quality">Качество</string>
+    <string name="latency">Скорость</string>
+    <string name="preview">Превью</string>
+    <string name="play_video">Смотреть видео</string>
+    <string name="file_info">О файле</string>
+    <string name="delete_file">Удалить файл</string>
+    <string name="edit">Изменить</string>
+    <string name="self_illumination">Подсветка экраном</string>
+    <string name="focus_timeout">Таймаут фокуса</string>
+    <string name="timer">Таймер</string>
+    <string name="cancel_timer">Отменить таймер</string>
+    <string name="video_capture_label">Записать видео</string>
+
+    <string name="camera">КАМЕРА</string>
+    <string name="video">ВИДЕО</string>
+    <string name="portrait_mode">ПОРТРЕТ</string>
+    <string name="hdr_mode">HDR</string>
+    <string name="night_mode">НОЧЬ</string>
+    <string name="face_retouch_mode">РЕТУШЬ ЛИЦА</string>
+    <string name="auto_mode">АВТО</string>
+    <string name="qr_scan_mode">QR-СКАН</string>
+    <string name="aspect_ratio_16_9">16:9</string>
+    <string name="aspect_ratio_4_3">4:3</string>
+    <string name="share_media">Поделиться</string>
+    <string name="edit_with">Изменить через</string>
+    <string name="rec_without_audio">Начать запись без звука</string>
+    <string name="qr_scan">QR-код</string>
+    <string name="data_matrix">Data Matrix</string>
+    <string name="aztec_code">Aztec-код</string>
+    <string name="more_options">Ещё</string>
+    <string name="pdf_417">PDF 417</string>
+    <string name="more_settings">Доп. настройки</string>
+
+    <string name="general">Общее</string>
+
+    <string name="save_image_as_previewed">Сохранять как на превью</string>
+    <string name="save_as_image_preview_desc">Сохранять фото как видно на превью (чинит зеркалирование фронталки)</string>
+
+    <string name="save_video_as_previewed">Сохранять видео как на превью</string>
+    <string name="save_as_video_preview_desc">Сохранять видео как видно на превью (чинит зеркалирование фронталки)</string>
+
+    <string name="gyroscope_suggestions">Подсказки гироскопа</string>
+    <string name="gyroscope_setting_desc">Иногда показывать подсказки для ровных кадров</string>
+
+    <string name="camera_sounds">Звуки камеры</string>
+    <string name="camera_sounds_desc">Звук затвора и другие сигналы</string>
+
+    <string name="storage">Хранилище</string>
+    <string name="storage_location">Место хранения</string>
+    <string name="revert_back_to_dcim">Вернуть DCIM</string>
+
+    <string name="image_quality">Качество фото</string>
+    <string name="image_quality_desc" formatted="false">Качество сохраняемых фото от 1% до 100%.</string>
+    <string name="photo">Фото</string>
+    <string name="remove_exif_title">Удалять EXIF после съёмки</string>
+    <string name="remove_exif_subtitle">Примечание: геометки настраиваются отдельно</string>
+    <string name="video_setting_title">Видео</string>
+    <string name="degree_format">%d°</string>
+    <string name="percent_symbol">%</string>
+
+    <string name="location_is_disabled">Геопозиция отключена</string>
+    <string name="settings">Настройки</string>
+    <string name="enable">Включить</string>
+    <string name="ok">ОК</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="disable_audio">Отключить звук</string>
+    <string name="copied_text_to_clipboard">Текст скопирован в буфер</string>
+    <string name="share_text_via">Поделиться текстом через</string>
+
+    <string name="unable_to_obtain_file_details">Не удалось получить данные файла</string>
+
+    <string name="no_editor_app_error">Нет подходящего приложения для редактирования</string>
+    <string name="edit_not_allowed">Редактирование в безопасном режиме запрещено.</string>
+    <string name="sharing_not_allowed">Отправка в безопасном режиме запрещена.</string>
+    <string name="edit_image">Изменить фото</string>
+    <string name="share_image">Поделиться фото</string>
+    <string name="unable_to_share_media">Не удалось поделиться файлом</string>
+    <string name="unable_to_edit_media">Не удалось изменить файл</string>
+    <string name="delete">Удалить</string>
+    <string name="delete_title">Вы уверены?</string>
+    <string name="deleted_successfully">Файл успешно удалён</string>
+    <string name="deleting_unexpected_error">Неожиданная ошибка при удалении файла</string>
+    <string name="delete_description">"Действительно удалить файл (%s)?"</string>
+    <string name="cancel">Отмена</string>
+    <string name="no_image">Сначала снимите фото или видео.</string>
+
+    <string name="empty_gallery">Снятые фото и видео не найдены</string>
+
+    <string name="bind_failure">Не удалось открыть камеру: сбой ОС или железа. Попробуйте перезагрузиться.</string>
+    <string name="extension_mode_unavailable">Этот режим недоступен на устройстве.</string>
+
+    <string name="quality_unsupported">%1$s не поддерживается этой камерой. Запись в другом качестве.</string>
+    <string name="camera_provider_init_failure">Не удалось загрузить камеру: сбой ОС или железа. Попробуйте перезагрузиться.</string>
+    <string name="extensions_manager_init_failure">Не удалось загрузить расширения: сбой ОС или железа. Режимы расширений недоступны. Попробуйте перезагрузиться.</string>
+    <string name="unsupported_taking_picture_while_recording">Устройство не умеет снимать фото во время записи видео с текущими настройками.</string>
+    <string name="location_unavailable">Не удалось прикрепить геометку: местоположение недоступно</string>
+    <string name="existing_no_image">Фото не найдено. Выход из галереи.</string>
+    <string name="no_barcode_selected">В ручном режиме выберите хотя бы один формат кодов</string>
+    <string name="flash_unavailable_in_selected_mode">Вспышка недоступна в текущем режиме.</string>
+    <string name="front_camera_unavailable">Фронтальная камера не найдена. Попробуйте позже!</string>
+    <string name="rear_camera_unavailable">Основная камера не найдена. Попробуйте позже!</string>
+    <string name="qr_rear_camera_unavailable">Основная камера недоступна. QR-режим на фронтальной камере.</string>
+    <string name="folder_not_found">Папка хранения не найдена</string>
+    <string name="reverting_to_default_folder">Возврат в стандартный каталог DCIM: выбранная папка, похоже, удалена. При необходимости выберите другое место хранения.</string>
+    <string name="more_settings_unavailable_during_recording">Нельзя открывать настройки во время записи</string>
+    <string name="toggle_geo_tagging_unsupported_while_recording">Нельзя переключать геометки во время записи</string>
+    <string name="flash_switch_unsupported">Нельзя переключать вспышку в этом режиме</string>
+    <string name="four_by_three_unsupported_in_video">4:3 не поддерживается в видео</string>
+    <string name="flash_unavailable_in_current_mode">Вспышка/фонарик недоступны в этом режиме</string>
+    <string name="unexpected_error_while_setting_focus_timeout">Неожиданная ошибка при настройке таймаута фокуса</string>
+    <string name="unexpected_error_while_setting_timer_duration">Неожиданная ошибка при настройке таймера</string>
+    <string name="storage_location_updated">Место хранения изменено: %s</string>
+    <string name="no_directory_selected">Папка не выбрана</string>
+    <string name="choose_storage_location">Выберите место хранения</string>
+    <string name="are_you_sure">Вы уверены?</string>
+    <string name="revert_to_default_directory">Вернуть стандартный каталог?</string>
+    <string name="reverted_to_default_directory">Возврат в стандартное место хранения</string>
+    <string name="already_using_default_directory">Уже используется стандартный каталог</string>
+    <string name="photo_quality_number_limit">Качество фото — от %1$d до %2$d</string>
+    <string name="image_taken_in_this_mode_does_not_contain_extra_data">Фото в этом режиме не содержат доп. EXIF-данных</string>
+    <string name="file_already_exists">Файл уже есть: %s</string>
+    <string name="file_does_not_exist">Файла нет: %s</string>
+    <string name="couldnt_exclude_qr_format">Нельзя исключить формат %s. В ручном режиме оставьте хотя бы один формат.</string>
+
+    <string name="capturing_image">Съёмка…</string>
+    <string name="image_captured_successfully">Фото успешно снято</string>
+    <string name="unable_to_capture_image">Не удалось снять фото</string>
+    <string name="unable_to_capture_image_verbose">Не удалось снять фото, код ошибки: %d</string>
+    <string name="unable_to_save_image">Не удалось сохранить фото</string>
+    <string name="unable_to_save_image_verbose">Не удалось сохранить фото, сбой на этапе: %s</string>
+    <string name="show_details">Показать детали</string>
+    <string name="recording_too_short_to_be_saved">Запись слишком короткая, не сохранена</string>
+    <string name="unable_to_save_video">Не удалось сохранить видео</string>
+    <string name="unable_to_save_video_verbose">Не удалось сохранить видео, код ошибки: %d</string>
+    <string name="unable_to_play_video">Не удалось воспроизвести видео</string>
+    <string name="error_during_recording">Ошибка при завершении записи, код: %d</string>
+    <string name="unable_to_access_output_file">Нет доступа к выходному файлу</string>
+    <string name="please_wait_for_image_to_get_captured_before_sharing">Дождитесь сохранения фото, прежде чем делиться долгим тапом</string>
+
+    <string name="file_details">О файле</string>
+    <string name="file_name_generic">Имя файла: </string>
+    <string name="not_found_generic">Не найдено</string>
+    <string name="file_size">Размер: </string>
+    <string name="file_path">Путь: </string>
+    <string name="resolution">Разрешение: </string>
+    <string name="duration">Длительность: </string>
+    <string name="file_created_on">Создан: </string>
+    <string name="last_modified_on">Изменён: </string>
+
+    <string name="inaccessible_image">Фото %s недоступно</string>
+    <string name="inaccessible_video">Видео %s недоступно</string>
+
+    <string name="main_storage">Основное хранилище</string>
+
+    <string name="zsl_setting_title">Нулевая задержка затвора</string>
+    <string name="zsl_setting_desc">Съёмка с нулевой задержкой (ZSL): быстрее, игнорирует ожидание фокуса. На некоторых устройствах глючит.</string>
+    <string name="audio_permission_failed_in_recording">Нельзя запрашивать доступ к микрофону во время записи</string>
+
+    <string name="tap_to_mute_audio">Коснитесь, чтобы выключить звук</string>
+    <string name="tap_to_unmute_audio">Коснитесь, чтобы включить звук</string>
+
+    <string name="video_audio_recording_muted">Звук видео выключен</string>
+    <string name="video_audio_recording_unmuted">Звук видео включён</string>
+
+    <string name="highest_res_setting">Максимальное разрешение фото</string>
+    <string name="highest_res_setting_desc">Использовать максимальное разрешение вместо стандартного. На некоторых устройствах файлы будут очень большими.</string>
+
+    <string name="wait_for_focus_lock">Ждать фокус</string>
+    <string name="invalid_photo_quality_value">Некорректное качество фото</string>
+
+    <string name="thmc_p0_title">Обработка фото ThunderCam</string>
+    <string name="thmc_p0_desc">Тон, контраст и шумодав на каждом фото. Выкл = стоковая съёмка.</string>
+    <string name="thmc_p0_strength_title">Сила обработки</string>
+    <string name="thmc_p0_strength_desc">Сколько обработки подмешивать, 1–100%.</string>
+    <string name="thmc_p0_strength_limit">Сила обработки — от %1$d до %2$d</string>
+    <string name="thmc_tone_title">Тон</string>
+    <string name="thmc_contrast_title">Контраст</string>
+    <string name="thmc_sat_title">Насыщенность</string>
+    <string name="thmc_warmth_title">Тепло</string>
+    <string name="thmc_denoise_title">Шумодав</string>
+    <string name="thmc_denoise_off">Выкл</string>
+    <string name="thmc_denoise_auto">Авто</string>
+    <string name="thmc_denoise_max">Макс</string>
+    <string name="thmc_zoom_title">Зум сверх оптики (ThunderCam)</string>
+    <string name="thmc_zoom_desc">Цифровой зум сверх оптики + ИИ-апскейл. Выкл = предел производителя.</string>
+    <string name="thmc_sr_title">Качественный апскейл (медленно)</string>
+    <string name="thmc_sr_desc">Резче, но медленнее. Выкл = быстрый.</string>
+    <string name="thmc_sr_blend_title">Сила ИИ-апскейла</string>
+    <string name="thmc_recipe_reset_title">Сбросить рецепт P0</string>
+    <string name="thmc_recipe_reset_desc">Вернуть начальные значения слайдеров</string>
+    <string name="thmc_recipe_reset_done">Рецепт сброшен к начальному</string>
+    <string name="thmc_track_title">Слежение за фокусом (ThunderCam)</string>
+    <string name="thmc_track_desc">Долгий тап по объекту — фокус ведёт его (фото и видео). Тап сбрасывает.</string>
+    <string name="thmc_auto_scene_title">Авто-сцена (ThunderCam)</string>
+    <string name="thmc_auto_scene_desc">Камера сама определяет сюжет и включает рецепт (ночь/портрет/еда/текст/пейзаж). Он главный, слайдеры — поправка 35%. Выкл = только ручной рецепт.</string>
+    <string name="thmc_global_refine_title">Доводка деталей (ThunderCam)</string>
+    <string name="thmc_global_refine_desc">Возвращает мелкую фактуру после шумодава. Выкл = только сглаживание.</string>
+    <string name="thmc_hdr_title">ThunderCam HDR (3 кадра)</string>
+    <string name="thmc_hdr_desc">Серия 0/−/+ с равнением и мержем. Медленнее, ночью резче. Выкл = одиночный сток.</string>
+    <string name="thmc_enhance_title">Улучшить фото (ThunderCam)</string>
+    <string name="thmc_enhance_ai">ИИ-свет (Zero-DCE)</string>
+    <string name="thmc_enhance_ai_strength">Сила ИИ-света</string>
+    <string name="thmc_enhance_hold">Удерживайте фото для сравнения с оригиналом</string>
+    <string name="thmc_cloud_title">Апскейл (облако, ThunderCam)</string>
+    <string name="thmc_cloud_working">Отправка в облако…</string>
+    <string name="thmc_cloud_done">Улучшенная копия из облака сохранена</string>
+    <string name="thmc_cloud_fail">Облачное улучшение не удалось</string>
+    <string name="thmc_cloud_no_url">Сначала укажи адрес VPS в настройках</string>
+    <string name="thmc_cloud_url_title">Адрес облачного сервера</string>
+    <string name="thmc_cloud_url_desc">Адрес VPS для облачного апскейла (пусто = выкл)</string>
+    <string name="thmc_cloud_auto_title">Авто-апскейл в облаке</string>
+    <string name="thmc_cloud_auto_desc">Каждое фото уходит в облако на апскейл (прогресс показан, оригинал заменяется)</string>
+    <string name="thmc_queue_busy">Ещё обрабатываю… секунду</string>
+    <string name="thmc_hdr_busy_stock">HDR ещё работает — снято одиночным кадром</string>
+    <string name="thmc_series_zoom_single">Зум %1$s: серия выкл (дрожь) — снято одиночным</string>
+    <string name="thmc_night_title">Ночь-авто (ThunderCam)</string>
+    <string name="thmc_night_desc">Тёмная сцена снимает серией и складывает. Выкл = ночью одиночный.</string>
+    <string name="thmc_night_hold">держите ровно</string>
+    <string name="thmc_night_freeze">замрите…</string>
+    <string name="thmc_bench_offer_title">Проверить скорость телефона?</string>
+    <string name="thmc_bench_offer_text">Тест на 3 секунды настроит ночь и зум под твоё железо. Ничего никуда не отправляется.</string>
+    <string name="thmc_bench_offer_check">Проверить</string>
+    <string name="thmc_bench_offer_later">Позже</string>
+    <string name="thmc_bench_running_title">Замеряю…</string>
+    <string name="thmc_bench_running_text">Складываю тестовые кадры, секунду</string>
+    <string name="thmc_bench_done_title">Скорость: %1$s</string>
+    <string name="thmc_bench_done_text">%1$d МП/с. Ночь: до %3$d кадров на %2$d px, тайлы зума сами подстроятся. Перезапуск — в настройках.</string>
+    <string name="thmc_bench_tier_budget">Бюджетник</string>
+    <string name="thmc_bench_tier_mid">Средний</string>
+    <string name="thmc_bench_tier_beast">Зверь</string>
+    <string name="thmc_bench_setting_title">Тест скорости телефона</string>
+    <string name="thmc_bench_setting_desc">Перезапустить замер (кадры ночи, тайлы зума)</string>
+    <string name="thmc_srmodel_title">SR-модель (ThunderCam)</string>
+    <string name="thmc_srmodel_desc">Вшитая, мощная по ссылке или своя</string>
+    <string name="thmc_section_title">ThunderCam</string>
+    <string name="thmc_enhance_loading">Загрузка фото…</string>
+    <string name="thmc_enhance_tool_ai">ИИ-свет</string>
+    <string name="thmc_enhance_pro">Апскейл Pro</string>
+    <string name="thmc_enhance_sec_ai">ИИ-свет</string>
+    <string name="thmc_enhance_sec_denoise">Шумодав</string>
+    <string name="thmc_enhance_sec_save">Сохранение</string>
+    <string name="thmc_enhance_pro_cloud">Облако x4plus</string>
+    <string name="thmc_enhance_pro_device">Pro на телефоне</string>
+    <string name="thmc_enhance_pro_work">%1$s… %2$d%%</string>
+    <string name="thmc_enhance_pro_done">%1$s: %2$ds, %3$d КБ → копия _SR</string>
+    <string name="thmc_enhance_pro_toobig">Фото большое: Pro на телефоне почти ничего не даст. Таким — только облако x4plus (адрес в настройках).</string>
+    <string name="thmc_enhance_overwrite">Перезаписать оригинал</string>
+    <string name="thmc_enhance_open">Улучшить</string>
+    <string name="thmc_enhance_snack">Фото готово — улучшить в 1 тап?</string>
+    <string name="thmc_video_title">Улучшить видео</string>
+    <string name="thmc_video_start_hint">Тот же рецепт, что для фото. Оригинал цел — рядом ляжет копия _THMC.</string>
+    <string name="thmc_video_strength">Сила обработки</string>
+    <string name="thmc_video_start">Начать</string>
+    <string name="thmc_video_cancel">Отмена</string>
+    <string name="thmc_video_working">Обработка… %d%%</string>
+    <string name="thmc_video_done">Видео улучшено: копия _THMC</string>
+    <string name="thmc_video_fail">Не получилось улучшить видео</string>
+    <string name="thmc_preset_title">Пресет рецепта</string>
+    <string name="thmc_preset_desc">Один тап вместо шести слайдеров</string>
+    <string name="thmc_preset_standard">Стандарт</string>
+    <string name="thmc_preset_standard_desc">Сбалансировано на каждый день</string>
+    <string name="thmc_preset_food">Еда</string>
+    <string name="thmc_preset_food_desc">Тепло и сочно, без пересвета</string>
+    <string name="thmc_preset_portrait">Портрет</string>
+    <string name="thmc_preset_portrait_desc">Мягкая кожа, спокойный цвет</string>
+    <string name="thmc_preset_night">Ночь</string>
+    <string name="thmc_preset_night_desc">Сдержанный цвет, максимум шумодава</string>
+    <string name="thmc_preset_document">Документ</string>
+    <string name="thmc_preset_document_desc">Контраст для текста</string>
+    <string name="thmc_preset_landscape">Пейзаж</string>
+    <string name="thmc_preset_landscape_desc">Глубина и сочность</string>
+    <string name="thmc_preset_custom">Свой</string>
+    <string name="thmc_preset_auto">Авто (по сцене)</string>
+    <string name="thmc_raw_title">RAW-серия (DNG)</string>
+    <string name="thmc_raw_desc">3 кадра −1/0/+1 для стекинга на компьютере. Видна, только если телефон отдаёт RAW.</string>
+    <string name="thmc_raw_working">RAW %1$d/3…</string>
+    <string name="thmc_raw_done">DNG ×%1$d сохранены</string>
+    <string name="thmc_raw_fail">RAW не вышел</string>
+    <string name="thmc_raw_cancelled">RAW отменён</string>    <string name="thmc_sub_series">Серии: ночь и HDR</string>
+    <string name="thmc_sub_zoom">Зум и увеличение</string>
+    <string name="thmc_sub_cloud">Облако</string>
+    <string name="thmc_advanced_title">Продвинутые</string>
+    <string name="thmc_badge_night">Авто: ночь</string>
+    <string name="thmc_badge_hdr">HDR</string>
+    <string name="thmc_tap_to_shoot">тап — снять сейчас</string>
+    <string name="thmc_cal_title">Настроить цвета под телефон</string>
+    <string name="thmc_cal_desc">Мастер в 2 тапа: дневное фото с лицом, выбрать красивейшее.</string>
+    <string name="thmc_cal_offer_title">Настроить камеру под телефон?</string>
+    <string name="thmc_cal_offer_text">Каждый сенсор видит цвета чуть по-своему. Один раз выбери красивейшее из 8 вариантов — и все фото пойдут по твоему рецепту. 2 тапа, без технических слов.</string>
+    <string name="thmc_cal_offer_setup">Настроить</string>
+    <string name="thmc_cal_offer_later">Позже</string>
+    <string name="thmc_cal_pick_hint">Выбери дневное фото с лицом — кожа лучший эталон</string>
+    <string name="thmc_cal_pick">Выбрать фото</string>
+    <string name="thmc_cal_other">Другое фото</string>
+    <string name="thmc_cal_step1">Раунд 1 из 2 — коснись красивейшего</string>
+    <string name="thmc_cal_step2">Раунд 2 из 2 — коснись красивейшего</string>
+    <string name="thmc_cal_warmer">Теплее</string>
+    <string name="thmc_cal_cooler">Холоднее</string>
+    <string name="thmc_cal_richer">Сочнее</string>
+    <string name="thmc_cal_calmer">Спокойнее</string>
+    <string name="thmc_cal_done">Готово — рецепт сохранён</string>
+    <string name="thmc_cal_saved">Цвета настроены под твой телефон</string>
+    <string name="thmc_enhance_overwritten">Оригинал перезаписан</string>
+    <string name="thmc_enhance_strength">Шумодав</string>
+    <string name="thmc_enhance_save">Сохранить копию</string>
+    <string name="thmc_enhance_saved">Улучшенная копия сохранена</string>
+    <string name="thmc_enhance_failed">Не получилось улучшить фото</string>
+    <string name="thmc_enhance_video_only">Улучшение только для фото</string>
+</resources>
