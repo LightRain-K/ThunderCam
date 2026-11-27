@@ -122,12 +122,54 @@ object ThmcGyro {
      */
     fun predictedShiftMag(t0Ns: Long, t1Ns: Long, focalPx: Float): Float {
         if (focalPx <= 0f) return 0f
-        val snap: List<Triple<Long, Float, Float>> = synchronized(buf) { buf.toList() }
-        if (snap.size < 2) return 0f
-        val (dtx, dty) = integrateRotation(snap, t0Ns, t1Ns)
+        val (dtx, dty) = rotationBetween(t0Ns, t1Ns)
         val magRad = sqrt(dtx * dtx + dty * dty)
         if (magRad.isNaN()) return 0f
         return (magRad * focalPx).toFloat().coerceAtLeast(0f)
+    }
+
+    /**
+     * Подписанный поворот между моментами: (yaw, pitch) в радианах, как их видит
+     * датчик. Знак осей телефона vs кадра не фиксирован (зависит от ориентации
+     * сенсора), поэтому вызыватель либо сравнивает модули, либо проверяет оба
+     * знака по картинке. 0 = данных нет.
+     */
+    fun rotationBetween(t0Ns: Long, t1Ns: Long): Pair<Double, Double> {
+        if (t1Ns <= t0Ns) return 0.0 to 0.0
+        val snap = synchronized(buf) { buf.toList() }
+        if (snap.size < 2) return 0.0 to 0.0
+        return integrateRotation(snap, t0Ns, t1Ns)
+    }
+
+    /**
+     * Интеграл |угловой скорости| за интервал, рад (сумма осей).
+     * Это честная метрика «сколько мотало»: кадр, снятый в рывок, смазан
+     * независимо от того, насколько резким он кажется по лапласиану.
+     * 0 = данных нет.
+     */
+    fun motionBetween(t0Ns: Long, t1Ns: Long): Double {
+        if (t1Ns <= t0Ns) return 0.0
+        val snap = synchronized(buf) { buf.toList() }
+        if (snap.size < 2) return 0.0
+        var acc = 0.0
+        var prevT = maxOf(snap[0].first, t0Ns)
+        var prevX = snap[0].second.toDouble()
+        var prevY = snap[0].third.toDouble()
+        for (i in 1 until snap.size) {
+            val (t, x, y) = snap[i]
+            if (t <= t0Ns) {
+                prevT = t; prevX = x.toDouble(); prevY = y.toDouble()
+                continue
+            }
+            if (prevT >= t1Ns) break
+            val te = minOf(t, t1Ns)
+            val dt = ((te - maxOf(prevT, t0Ns)) / 1_000_000_000.0).coerceAtLeast(0.0)
+            val mx = (kotlin.math.abs(prevX) + kotlin.math.abs(x.toDouble())) * 0.5
+            val my = (kotlin.math.abs(prevY) + kotlin.math.abs(y.toDouble())) * 0.5
+            acc += (mx + my) * dt
+            prevT = t; prevX = x.toDouble(); prevY = y.toDouble()
+        }
+        return acc
     }
 
     /**
