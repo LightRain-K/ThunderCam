@@ -27,9 +27,10 @@ import androidx.camera.core.Camera
  * одним прогоном, при необходимости меняются SIGN_X/SIGN_Y.
  */
 object ThmcPreviewStab {
-    private const val MARGIN = 0.10f          // запас на сдвиг: 10% кадра
+    private const val MARGIN = 0.14f          // запас на сдвиг: 14% кадра
     private const val TAU = 0.6f              // high-pass: убираем медленный дрейф
-    private const val MAX_SHIFT_FRAC = 0.5f   // не больше половины запаса
+    private const val MAX_SHIFT_FRAC = 0.6f   // не больше 60% запаса
+    private const val GAIN = 1.35f            // чуть перекомпенсируем — эффект заметнее
 
     // Знак «экран против движения сцены». Если на устройстве окажется наоборот —
     // картинка будет усиливать тряску: тогда поставить +1.
@@ -113,12 +114,15 @@ object ThmcPreviewStab {
 
         val cam = cameraProvider?.invoke() ?: return
         val zoom = (zoomProvider?.invoke() ?: 1f).coerceIn(1f, 20f)
-        val focal = try { ThmcAlign.focalPxGray(cam, v.width) } catch (_: Throwable) { 0f }
-        if (focal <= 0f) return
+        val focal = try {
+            val f = ThmcAlign.focalPxGray(cam, v.width)
+            // На части бюджетников LENS_INFO_* пустые — берём типичное 26 мм-экв.
+            if (f > 0f) f else v.width * 0.8f
+        } catch (_: Throwable) { v.width * 0.8f }
 
         val maxShift = MAX_SHIFT_FRAC * MARGIN * v.width
-        var dx = hpYaw * focal * zoom * SIGN_X
-        var dy = hpPitch * focal * zoom * SIGN_Y
+        var dx = hpYaw * focal * zoom * SIGN_X * GAIN
+        var dy = hpPitch * focal * zoom * SIGN_Y * GAIN
         dx = dx.coerceIn(-maxShift, maxShift)
         dy = dy.coerceIn(-maxShift, maxShift)
         v.translationX = dx

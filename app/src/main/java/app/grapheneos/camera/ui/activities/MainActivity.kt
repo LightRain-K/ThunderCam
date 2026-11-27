@@ -1119,6 +1119,21 @@ open class MainActivity : AppCompatActivity(),
             if (!camConfig.isQRMode)
                 settingsDialog.show()
         }
+        // Быстрый тумблер стабилизации превью (справа сверху).
+        binding.thmcStabToggle.setOnClickListener {
+            try {
+                camConfig.thmcPreviewStab = !camConfig.thmcPreviewStab
+                applyThmcPreviewStab()
+                val on = camConfig.thmcPreviewStab
+                showMessage(
+                    getString(
+                        R.string.thmc_preview_stab_state,
+                        getString(if (on) R.string.thmc_state_on else R.string.thmc_state_off)
+                    )
+                )
+            } catch (_: Throwable) {}
+        }
+        applyThmcPreviewStab()
         // Вход во все настройки один — шестерёнка → быстрый диалог → кнопка «Все настройки».
 
         settingsIcon.viewTreeObserver.addOnGlobalLayoutListener(
@@ -2321,7 +2336,14 @@ open class MainActivity : AppCompatActivity(),
      */
     private fun applyThmcPreviewStab() {
         try {
-            if (camConfig.thmcPreviewStab) {
+            val on = camConfig.thmcPreviewStab
+            // Кнопка на главном экране: яркая — включено, тусклая — выключено.
+            try {
+                binding.thmcStabToggle.alpha = if (on) 1f else 0.45f
+                binding.thmcStabToggle.visibility =
+                    if (camConfig.isVideoMode || camConfig.isQRMode) View.GONE else View.VISIBLE
+            } catch (_: Throwable) {}
+            if (on) {
                 app.grapheneos.camera.thmc.ThmcGyro.start(this)
                 app.grapheneos.camera.thmc.ThmcPreviewStab.start(
                     binding.preview,
