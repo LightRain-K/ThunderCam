@@ -662,6 +662,16 @@ class CamConfig(private val mActivity: MainActivity) {
         get() = thmc.globalRefine
         set(value) { thmc.globalRefine = value }
 
+    // Мастер умного улучшения: выкл = сток без вычислений (серии и P0 пропускаются).
+    var thmcThunder: Boolean
+        get() = thmc.thunder
+        set(value) { thmc.thunder = value }
+
+    // Простой/экспертный вид экрана настроек (на съёмку не влияет).
+    var thmcExpertUi: Boolean
+        get() = thmc.expertUi
+        set(value) { thmc.expertUi = value }
+
     // Авто-EV: перед одиночным кадром давим пересвет HAL отрицательным bias
     // (только вниз, поверх ручной компенсации, с возвратом). Иначе при среднем
     // свете HAL ставит ISO ~4000 и выбеливает кадр — P0 это уже не чинит.

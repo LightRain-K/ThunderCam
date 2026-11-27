@@ -143,20 +143,22 @@ object ColorLut {
                 b = gray + (b - gray) * sEff
                 // 4. WB
                 r *= p.rGain; g *= p.gGain; b *= p.bGain
-                // Filmic-плечо: мягкий переход вместо рваного клиппа (деталей в клиппе
-                // нет — сенсор насыщен, но пятно будет плавным, без цветной каймы).
+                // Filmic-плечо: smoothstep-desat у клиппа (236→255) убирает
+                // цветную кайму фонарей/окон, а компрессия только от 250 —
+                // белое (бумага, снег, свадебное платье) остаётся белым,
+                // а не серым (раньше срез с 235 давал 245 на выходе).
                 run {
                     val mx0 = maxOf(r, g, b)
-                    if (mx0 > 235f) {
-                        var f = (mx0 - 235f) / 20f
-                        if (f > 1.5f) f = 1.5f
+                    if (mx0 > 236f) {
+                        var t = (mx0 - 236f) / 19f
+                        if (t > 1f) t = 1f
+                        val s = t * t * (3f - 2f * t)
                         val lumw = 0.299f * r + 0.587f * g + 0.114f * b
-                        var d = f * 0.6f
-                        if (d > 0.9f) d = 0.9f
+                        val d = s * 0.55f
                         r += (lumw - r) * d; g += (lumw - g) * d; b += (lumw - b) * d
                         val mx2 = maxOf(r, g, b)
-                        if (mx2 > 235f) {
-                            val k = (235f + (mx2 - 235f) * 0.5f) / mx2
+                        if (mx2 > 250f) {
+                            val k = (250f + (mx2 - 250f) * 0.7f) / mx2
                             r *= k; g *= k; b *= k
                         }
                     }

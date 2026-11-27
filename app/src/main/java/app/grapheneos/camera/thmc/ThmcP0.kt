@@ -224,7 +224,12 @@ object ThmcP0 {
             }
             val w = bmp.width; val h = bmp.height
             val res = com.example.thundercam20.imageprocessing.ImageProcessor()
-                .process(bmp, params.toRestoreConfig(), null, null, params.autoScene, readIso(exifSource))
+                .process(
+                    bmp, params.toRestoreConfig(), null, null, params.autoScene, readIso(exifSource),
+                    // 100% силы — микс со стоком не нужен: отдаём битмап во владение
+                    // конвейеру (минус 48 МБ копии и memcpy на 12 Мп).
+                    consumeInput = strength01 >= 0.999f
+                )
             // Калибровка ручной экспозиции: (выдержка×ISO → яркость) с этого кадра.
             try {
                 val ctx = context ?: lastCtx
@@ -323,6 +328,16 @@ object ThmcP0 {
      * «Подробности» галереи показывали работу P0 без логов. Пустой lastRecipe =
      * нечего писать; любая проблема → исходные байты.
      */
+    /**
+     * Описание для EXIF (ImageDescription): рецепт + σ + время. Готовится ДО
+     * энкода, чтобы серийный путь писал его одним проходом вместе с EXIF.
+     */
+    fun recipeDescription(iso: Int): String? {
+        val recipe = try { ThmcTrackState.lastRecipe } catch (_: Throwable) { "" }
+        if (recipe.isEmpty()) return null
+        return "ThunderCam P0 $recipe iso$iso"
+    }
+
     fun stampRecipe(jpeg: ByteArray, iso: Int): ByteArray {
         val recipe = try { ThmcTrackState.lastRecipe } catch (_: Throwable) { "" }
         if (recipe.isEmpty()) return jpeg
@@ -397,7 +412,10 @@ object ThmcP0 {
             c
         }
         val res = com.example.thundercam20.imageprocessing.ImageProcessor()
-            .process(bmp, params.toRestoreConfig(), null, null, params.autoScene, iso)
+            .process(
+                bmp, params.toRestoreConfig(), null, null, params.autoScene, iso,
+                consumeInput = strength01 >= 0.999f
+            )
         var out = res.bitmap
         val s = strength01.coerceIn(0f, 1f)
         if (s < 0.999f) {

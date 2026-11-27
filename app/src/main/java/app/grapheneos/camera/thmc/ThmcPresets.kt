@@ -56,6 +56,15 @@ object ThmcPresets {
         ALL.find { it.tone == tone && it.contrast == contrast && it.sat == sat && it.warmth == warmth && it.denoise == denoise }?.id
             ?: ID_CUSTOM
 
+    /**
+     * Совпадение только по «внешнему виду» (тон/контраст/насыщенность/тепло), без
+     * шумодава. Шумодав — отдельная ручка (и часть профиля качества), поэтому
+     * его изменение не должно превращать стиль в «Свой». Чистая.
+     */
+    fun matchIdByLook(tone: Int, contrast: Int, sat: Int, warmth: Int): String =
+        ALL.find { it.tone == tone && it.contrast == contrast && it.sat == sat && it.warmth == warmth }?.id
+            ?: ID_CUSTOM
+
     /** Применить пресет к настройкам (слайдеры + id). */
     fun applyTo(settings: ThmcSettings, id: String) {
         val p = byId(id)

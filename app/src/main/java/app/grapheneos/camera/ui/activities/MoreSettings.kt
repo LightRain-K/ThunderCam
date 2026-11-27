@@ -282,6 +282,7 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         thmcNightToggle.isChecked = camConfig.thmcNightAuto
         thmcNightToggle.setOnClickListener {
             camConfig.thmcNightAuto = thmcNightToggle.isChecked
+            refreshThmcSummary()
         }
         thmcNightSetting.setOnClickListener {
             thmcNightToggle.performClick()
@@ -293,6 +294,7 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         thmcHdrToggle.isChecked = camConfig.thmcHdr
         thmcHdrToggle.setOnClickListener {
             camConfig.thmcHdr = thmcHdrToggle.isChecked
+            refreshThmcSummary()
         }
         thmcHdrSetting.setOnClickListener {
             thmcHdrToggle.performClick()
@@ -326,6 +328,7 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         thmcSrToggle.isChecked = camConfig.thmcSrPowerful
         thmcSrToggle.setOnClickListener {
             camConfig.thmcSrPowerful = thmcSrToggle.isChecked
+            refreshThmcProfileSubtitle()
         }
         thmcSrSetting.setOnClickListener {
             thmcSrToggle.performClick()
@@ -336,6 +339,8 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         thmcAutoSceneToggle.isChecked = camConfig.thmcAutoScene
         thmcAutoSceneToggle.setOnClickListener {
             camConfig.thmcAutoScene = thmcAutoSceneToggle.isChecked
+            updatePresetSubtitle()
+            refreshThmcSummary()
         }
         thmcAutoSceneSetting.setOnClickListener {
             thmcAutoSceneToggle.performClick()
@@ -372,22 +377,8 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         }
 
         // ThunderCam: рецепт P0 — 6 слайдеров. Значение применяется сразу, переживает перезапуск.
-        // Подпись пресета: точное совпадение слайдеров = имя пресета, иначе «Свой».
-        fun updatePresetSubtitle() {
-            try {
-                // Авто-сцена включена — рецепт выбирает камера, подпись честно говорит об этом.
-                if (camConfig.thmcAutoScene) {
-                    binding.thmcPresetSettingSubtitle.text = getString(R.string.thmc_preset_auto)
-                    return
-                }
-                val id = app.grapheneos.camera.thmc.ThmcPresets.matchId(
-                    camConfig.thmcTone, camConfig.thmcContrast, camConfig.thmcSat,
-                    camConfig.thmcWarmth, camConfig.thmcDenoise
-                )
-                binding.thmcPresetSettingSubtitle.text =
-                    getString(app.grapheneos.camera.thmc.ThmcPresets.byId(id).titleRes)
-            } catch (_: Throwable) {}
-        }
+        // Подпись пресета обновляется в updatePresetSubtitle() (член класса — вызывается
+        // и из слушателей выше по коду).
         fun refreshRecipeSliders() {
             fun pcts(v: Int) = "$v%"
             binding.thmcStrengthSlider.value = camConfig.thmcP0Strength.toFloat()
@@ -438,7 +429,7 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         bindThmcSlider(binding.thmcWarmthSlider, binding.thmcWarmthValue,
             { camConfig.thmcWarmth }, { camConfig.thmcWarmth = it; updatePresetSubtitle() }, pct)
         bindThmcSlider(binding.thmcDenoiseSlider, binding.thmcDenoiseValue,
-            { camConfig.thmcDenoise }, { camConfig.thmcDenoise = it; updatePresetSubtitle() }) { v ->
+            { camConfig.thmcDenoise }, { camConfig.thmcDenoise = it; updatePresetSubtitle(); refreshThmcProfileSubtitle() }) { v ->
             when {
                 v <= 0 -> getString(R.string.thmc_denoise_off)
                 v < 70 -> getString(R.string.thmc_denoise_auto)
@@ -514,9 +505,9 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
             val presets = app.grapheneos.camera.thmc.ThmcPresets.ALL
             val labels = presets.map { "${getString(it.titleRes)} — ${getString(it.descRes)}" }.toTypedArray()
             var checked = presets.indexOfFirst {
-                it.id == app.grapheneos.camera.thmc.ThmcPresets.matchId(
+                it.id == app.grapheneos.camera.thmc.ThmcPresets.matchIdByLook(
                     camConfig.thmcTone, camConfig.thmcContrast, camConfig.thmcSat,
-                    camConfig.thmcWarmth, camConfig.thmcDenoise
+                    camConfig.thmcWarmth
                 )
             }.coerceAtLeast(0)
             com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
@@ -537,35 +528,105 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
                 .show()
         }
 
-        // Продвинутые: тонкая настройка движка скрыта, чтобы не пугать.
-        // Видимое: P0, рецепт, ночь, HDR, сцены, трекинг, зум, модель, калибровка, бенчмарк.
-        // Скрытое: доводка деталей, авто/ручная EV, бленд SR, облако целиком.
-        val advancedRows = listOf(
-            binding.thmcAdvancedHeader,
-            binding.thmcGlobalRefineSetting,
-            binding.thmcAutoEvSetting,
-            binding.thmcManualEvSetting,
-            binding.thmcSrBlendBlock,
-            binding.thmcSubCloudHeader,
-            binding.thmcCloudAutoSetting,
-            binding.thmcCloudUrlSetting,
-        )
-        val advPrefs = getSharedPreferences("commons", Context.MODE_PRIVATE)
-        fun applyAdvanced() {
-            val open = try { advPrefs.getBoolean("thmc_advanced_open", false) } catch (_: Throwable) { false }
-            for (row in advancedRows) {
-                row.visibility = if (row == binding.thmcAdvancedHeader || open) View.VISIBLE else View.GONE
+        // Профиль качества: один тап вместо трёх ручек. Подпись показывает реальные
+        // текущие значения (после ручной правки она честно меняется).
+        refreshThmcProfileSubtitle()
+        binding.thmcProfileSetting.setOnClickListener {
+            val titles = intArrayOf(
+                R.string.thmc_profile_fast, R.string.thmc_profile_balanced, R.string.thmc_profile_max
+            )
+            val descs = intArrayOf(
+                R.string.thmc_profile_fast_desc, R.string.thmc_profile_balanced_desc, R.string.thmc_profile_max_desc
+            )
+            val labels = titles.indices.map {
+                "${getString(titles[it])} — ${getString(descs[it])}"
+            }.toTypedArray()
+            var checked = when {
+                camConfig.thmcSrPowerful || camConfig.thmcDenoise >= 70 -> 2
+                camConfig.thmcDenoise >= 55 -> 1
+                else -> 0
             }
-            binding.thmcAdvancedHeader.text =
-                "${getString(R.string.thmc_advanced_title)} ${if (open) "▴" else "▾"}"
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.thmc_profile_title)
+                .setSingleChoiceItems(labels, checked) { _, which -> checked = which }
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    when (checked) {
+                        0 -> {
+                            camConfig.thmcP0Strength = 90
+                            camConfig.thmcDenoise = 45
+                            camConfig.thmcSrPowerful = false
+                            camConfig.thmcSrBlend = 60
+                        }
+                        2 -> {
+                            camConfig.thmcP0Strength = 100
+                            camConfig.thmcDenoise = 75
+                            camConfig.thmcSrPowerful = true
+                            camConfig.thmcSrBlend = 75
+                        }
+                        else -> {
+                            camConfig.thmcP0Strength = 100
+                            camConfig.thmcDenoise = 60
+                            camConfig.thmcSrPowerful = false
+                            camConfig.thmcSrBlend = 70
+                        }
+                    }
+                    refreshRecipeSliders()
+                    binding.thmcSrBlendSlider.value = camConfig.thmcSrBlend.toFloat()
+                    binding.thmcSrSettingToggle.isChecked = camConfig.thmcSrPowerful
+                    updatePresetSubtitle()
+                    refreshThmcProfileSubtitle()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
-        binding.thmcAdvancedHeader.setOnClickListener {
+
+        // Справка простым языком: что делает каждый пункт.
+        binding.thmcHelpSetting.setOnClickListener {
             try {
-                advPrefs.edit().putBoolean("thmc_advanced_open", !advPrefs.getBoolean("thmc_advanced_open", false)).apply()
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.thmc_help_title)
+                    .setMessage(R.string.thmc_help_text)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
             } catch (_: Throwable) {}
-            applyAdvanced()
         }
-        applyAdvanced()
+
+        // Экспертный режим: «всё под капотом» одним тумблером. Простой вид по
+        // умолчанию: стиль, шумодав, ночь, HDR, авто-сюжет и сброс — без ползунков.
+        binding.thmcAdvancedHeader.setOnClickListener {
+            val prefs = getSharedPreferences("commons", Context.MODE_PRIVATE)
+            try {
+                prefs.edit().putBoolean(
+                    "thmc_advanced_open", !prefs.getBoolean("thmc_advanced_open", false)
+                ).apply()
+            } catch (_: Throwable) {}
+            applyAdvancedVisibility()
+        }
+
+        // Мастер «Умное улучшение»: один выключатель вместо четырёх.
+        binding.thmcSmartToggle.isChecked = camConfig.thmcThunder
+        binding.thmcSmartToggle.setOnClickListener {
+            camConfig.thmcThunder = binding.thmcSmartToggle.isChecked
+            // Мастер меняет отдельные тумблеры — подтягиваем их состояние на экран.
+            try { binding.thmcP0SettingToggle.isChecked = camConfig.thmcP0 } catch (_: Throwable) {}
+            try { binding.thmcNightSettingToggle.isChecked = camConfig.thmcNightAuto } catch (_: Throwable) {}
+            try { binding.thmcHdrSettingToggle.isChecked = camConfig.thmcHdr } catch (_: Throwable) {}
+            try { binding.thmcAutoSceneToggle.isChecked = camConfig.thmcAutoScene } catch (_: Throwable) {}
+            applySmartEnabledState()
+            refreshThmcSummary()
+        }
+        binding.thmcSmartSetting.setOnClickListener { binding.thmcSmartToggle.performClick() }
+
+        binding.thmcExpertToggle.isChecked = camConfig.thmcExpertUi
+        binding.thmcExpertToggle.setOnClickListener {
+            camConfig.thmcExpertUi = binding.thmcExpertToggle.isChecked
+            applyThmcExpertUi()
+        }
+        binding.thmcExpertSetting.setOnClickListener { binding.thmcExpertToggle.performClick() }
+
+        applyThmcExpertUi()
+        applySmartEnabledState()
+        refreshThmcSummary()
 
         // ThunderCam: селектор разрешения фото (авто/макс/точные размеры HAL).
         camConfig.migrateHighestResToSelector()
@@ -693,6 +754,141 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
     fun showMessage(msg: String) {
         snackBar.setText(msg)
         snackBar.show()
+    }
+
+    /** Подпись стиля: точное совпадение слайдеров = имя пресета, иначе «Свой». */
+    private fun updatePresetSubtitle() {
+        try {
+            // Авто-сцена включена — рецепт выбирает камера, подпись честно говорит об этом.
+            if (camConfig.thmcAutoScene) {
+                binding.thmcPresetSettingSubtitle.text = getString(R.string.thmc_preset_auto)
+                refreshThmcSummary()
+                return
+            }
+            val id = app.grapheneos.camera.thmc.ThmcPresets.matchIdByLook(
+                camConfig.thmcTone, camConfig.thmcContrast, camConfig.thmcSat,
+                camConfig.thmcWarmth
+            )
+            binding.thmcPresetSettingSubtitle.text =
+                getString(app.grapheneos.camera.thmc.ThmcPresets.byId(id).titleRes)
+            refreshThmcSummary()
+        } catch (_: Throwable) {}
+    }
+
+    /**
+     * Простой / экспертный вид настроек. Простой (по умолчанию) оставляет только
+     * понятные решения: стиль, шумодав, ночь, HDR, авто-сюжет. Всё остальное —
+     * под тумблером «Показать все настройки»; значения при этом не меняются.
+     */
+    private fun applyThmcExpertUi() {
+        try {
+            val expert = camConfig.thmcExpertUi
+            binding.thmcExpertToggle.isChecked = expert
+            val rows = listOf(
+                binding.thmcP0Setting,
+                binding.thmcStrengthSlider.parent as View,
+                binding.thmcToneSlider.parent as View,
+                binding.thmcContrastSlider.parent as View,
+                binding.thmcSatSlider.parent as View,
+                binding.thmcWarmthSlider.parent as View,
+                binding.thmcSrmodelSetting,
+                binding.thmcBenchSetting,
+                binding.thmcCalibrateSetting,
+                binding.thmcRawSetting,
+                binding.thmcSubZoomHeader,
+                binding.thmcZoomSetting,
+                binding.thmcSrSetting,
+                binding.saveImageAsPreviewSetting,
+            )
+            for (row in rows) row.visibility = if (expert) View.VISIBLE else View.GONE
+            applyAdvancedVisibility()
+        } catch (_: Throwable) {}
+    }
+
+    /** «Тонкая настройка движка» — вложенная группа внутри экспертного режима. */
+    private fun applyAdvancedVisibility() {
+        try {
+            val expert = camConfig.thmcExpertUi
+            val prefs = getSharedPreferences("commons", Context.MODE_PRIVATE)
+            val open = try { prefs.getBoolean("thmc_advanced_open", false) } catch (_: Throwable) { false }
+            val rows = listOf(
+                binding.thmcGlobalRefineSetting,
+                binding.thmcAutoEvSetting,
+                binding.thmcManualEvSetting,
+                binding.thmcSrBlendBlock,
+                binding.thmcSubCloudHeader,
+                binding.thmcCloudAutoSetting,
+                binding.thmcCloudUrlSetting,
+            )
+            binding.thmcAdvancedHeader.visibility = if (expert) View.VISIBLE else View.GONE
+            for (row in rows) row.visibility = if (expert && open) View.VISIBLE else View.GONE
+            binding.thmcAdvancedHeader.text =
+                "${getString(R.string.thmc_advanced_title)} ${if (open) "▴" else "▾"}"
+        } catch (_: Throwable) {}
+    }
+
+    /** Мастер выключен — зависимые переключатели гаснут, чтобы не выглядели «включёнными». */
+    private fun applySmartEnabledState() {
+        try {
+            val on = camConfig.thmcThunder
+            val rows = listOf(
+                binding.thmcNightSetting, binding.thmcHdrSetting, binding.thmcAutoSceneSetting,
+                binding.thmcPresetSetting, binding.thmcP0Setting,
+            )
+            for (r in rows) { r.alpha = if (on) 1f else 0.4f; r.isEnabled = on }
+            binding.thmcNightSettingToggle.isEnabled = on
+            binding.thmcHdrSettingToggle.isEnabled = on
+            binding.thmcAutoSceneToggle.isEnabled = on
+            binding.thmcP0SettingToggle.isEnabled = on
+            binding.thmcDenoiseSlider.isEnabled = on
+            binding.thmcDenoiseSlider.alpha = if (on) 1f else 0.4f
+        } catch (_: Throwable) {}
+    }
+
+    /** Подпись профиля: реальные текущие значения, а не название последнего нажатия. */
+    private fun refreshThmcProfileSubtitle() {
+        try {
+            binding.thmcProfileSubtitle.text = getString(
+                R.string.thmc_profile_summary,
+                camConfig.thmcDenoise,
+                getString(
+                    if (camConfig.thmcSrPowerful) R.string.thmc_profile_sr_on
+                    else R.string.thmc_profile_sr_off
+                )
+            )
+        } catch (_: Throwable) {}
+    }
+
+    /** Сводка «что сейчас включено» — простыми словами, без терминов. */
+    private fun refreshThmcSummary() {
+        try {
+            if (!camConfig.thmcThunder) {
+                binding.thmcSummary.text = getString(R.string.thmc_sum_off)
+                return
+            }
+            val style = if (camConfig.thmcAutoScene) {
+                getString(R.string.thmc_sum_style_auto)
+            } else {
+                val id = app.grapheneos.camera.thmc.ThmcPresets.matchIdByLook(
+                    camConfig.thmcTone, camConfig.thmcContrast, camConfig.thmcSat,
+                    camConfig.thmcWarmth
+                )
+                getString(
+                    R.string.thmc_sum_style,
+                    getString(app.grapheneos.camera.thmc.ThmcPresets.byId(id).titleRes)
+                )
+            }
+            val night = getString(
+                if (camConfig.thmcNightAuto) R.string.thmc_sum_night_on else R.string.thmc_sum_night_off
+            )
+            val hdr = getString(
+                if (camConfig.thmcHdr) R.string.thmc_sum_hdr_on else R.string.thmc_sum_hdr_off
+            )
+            val scene = getString(
+                if (camConfig.thmcAutoScene) R.string.thmc_sum_scene_on else R.string.thmc_sum_scene_off
+            )
+            binding.thmcSummary.text = getString(R.string.thmc_summary, style, night, hdr, scene)
+        } catch (_: Throwable) {}
     }
 
     override fun onSupportNavigateUp(): Boolean {

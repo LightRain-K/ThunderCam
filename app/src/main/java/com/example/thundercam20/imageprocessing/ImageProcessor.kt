@@ -23,7 +23,7 @@ class ImageProcessor {
     private val noiseReducer = NoiseReducer()
     private val sharpener = Sharpener()
 
-    fun process(bitmap: Bitmap, config: RestoreConfig = RestoreConfig.Default, context: android.content.Context? = null, focusPointNorm: android.graphics.PointF? = null, autoScene: Boolean = false, iso: Int = 0): ProcessedImage {
+    fun process(bitmap: Bitmap, config: RestoreConfig = RestoreConfig.Default, context: android.content.Context? = null, focusPointNorm: android.graphics.PointF? = null, autoScene: Boolean = false, iso: Int = 0, consumeInput: Boolean = false): ProcessedImage {
         val tStart = System.nanoTime()
         val tm = com.example.thundercam20.utils.Timing("P0stages")
         val analysis = analyzer.analyze(bitmap)
@@ -191,10 +191,12 @@ class ImageProcessor {
         var recipe = if (adaptiveBase.denoiseMode == 0) "dn0" else "clean"
         var preStrong = false
         if (isStrong || isLight) {
-            // Шумодав освобождает вход, а bitmap принадлежит вызывателю
-            // (нужен для blend при силе <100%) — работаем на копии-владении.
+            // Шумодав освобождает вход. Если caller отдал владение (сила 100%,
+            // mix со стоком не нужен) — работаем прямо на нём: 12 Мп копия
+            // (48 МБ + memcpy) в главном пути больше не нужна.
             val src = if (out === bitmap) {
-                try { bitmap.copy(Bitmap.Config.ARGB_8888, false) } catch (_: Throwable) { null }
+                if (consumeInput) out
+                else try { bitmap.copy(Bitmap.Config.ARGB_8888, false) } catch (_: Throwable) { null }
             } else out
             if (src != null) {
                 val (r, tg) = if (isStrong) {
@@ -284,11 +286,12 @@ class ImageProcessor {
         if (!noisyAssume && measNoise < 3.0 && meanL > 0.45f && !paperLike &&
             adaptiveBase.contrastFactor > 1f && out.isMutable) {
             try {
-                P0Lite.localContrast(out, 0.26f)
+                P0Lite.localContrast(out, 0.18f)
                 // HAL шарпит ДО нас, а мы декодим и перекодируем JPEG — без
                 // микроконтраста кадр выходит мыльнее стока (полевая жалоба).
-                // Чистый кадр (σ<3): порог 6 не поднимает зерно.
-                val sh = sharpener.unsharpFast(out, radius = 0.8f, amount = 0.30f, threshold = 6.0)
+                // Порог 10 и amount 0.22: ореол-кайма на кромках в фокусе
+                // (было 0.30/6 — «серая фигня» на контурах объектов).
+                val sh = sharpener.unsharpFast(out, radius = 0.8f, amount = 0.22f, threshold = 10.0)
                 if (sh !== out) {
                     if (out !== bitmap) try { out.recycle() } catch (_: Exception) {}
                     out = sh
@@ -307,7 +310,7 @@ class ImageProcessor {
                 // Порог 9 отсекает зерно; на 1600+ ISO зерно крупнее порога —
                 // задирать 12, иначе crisp возвращает то, что шумодав подавил.
                 val crispThr = if (isoBand >= 1) 12.0 else 9.0
-                val c = sharpener.unsharpFast(out, radius = 0.8f, amount = 0.60f, threshold = crispThr)
+                val c = sharpener.unsharpFast(out, radius = 0.8f, amount = 0.45f, threshold = crispThr)
                 if (c !== out) { try { out.recycle() } catch (_: Exception) {} }
                 out = c
                 crisp = true

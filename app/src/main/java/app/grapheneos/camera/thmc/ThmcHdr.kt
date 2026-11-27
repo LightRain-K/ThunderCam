@@ -142,6 +142,7 @@ object ThmcHdr {
             try { ThmcGyro.stop() } catch (_: Throwable) {}
         }
         try {
+            val seriesStart = System.nanoTime()
             ThmcGyro.start(imageCapturer.mActivity)
             val previewL = ThmcTrackState.lastPreviewL
             // Суммарный bias вниз (превью + клиппинг светов + серво по прошлому ISO).
@@ -197,7 +198,9 @@ object ThmcHdr {
                     val pt = factory.createPoint(pv.width / 2f, pv.height / 2f)
                     val action = FocusMeteringAction.Builder(pt, FocusMeteringAction.FLAG_AF)
                         .disableAutoCancel().build()
-                    camera.cameraControl.startFocusAndMetering(action).get(600, TimeUnit.MILLISECONDS)
+                    // 450мс вместо 600: AF продолжает сходиться в фоне (disableAutoCancel),
+                    // первое плечо брекета и так снимается первым.
+                    camera.cameraControl.startFocusAndMetering(action).get(450, TimeUnit.MILLISECONDS)
                     ThmcZsl.markAf()
                 }
             } catch (t: Throwable) {
@@ -206,7 +209,9 @@ object ThmcHdr {
 
             val quality = imageCapture.jpegQuality
             val collected = mutableListOf<ByteArray>()
-            val frameTimesNs = mutableListOf<Long>()
+            // Декод «на лету»: кадр расшифровывается, пока HAL снимает следующий брекет.
+            val workSide = hdrSide(imageCapturer)
+            val burst = ThmcBurst(workSide)
             val total = brackets.size
             for ((idx, b) in brackets.withIndex()) {
                 if (cancelled.get()) {
@@ -223,25 +228,34 @@ object ThmcHdr {
                     return
                 }
                 progress(imageCapturer, hdrProgress(imageCapturer, idx, total))
+                // Плечо +1.5EV нужно только чтобы вытащить РЕАЛЬНО проваленные тени.
+                // Если в первом (0EV) кадре тени уже нормальные — не тратим ~0.9с
+                // (EC + кадр). Кадр 0 успевает декодироваться «на лету» к этому моменту.
+                if (idx == 2 && brackets.size == 3 && shadowQuartile(burst.peek(0)) > 0.10f) {
+                    Log.i(TAG, "hdr skip +EV bracket (shadows ok)")
+                    break
+                }
                 try {
-                    // Stage A: fixed burst — EC один раз до цикла, дальше кадры подряд без EC.
-                    // Первый кадр ставит EC, остальные идут сразу (~250мс вместо 700+250).
+                    // EC применяется к следующему запросу; AE на бюджетнике сходится
+                    // за 3-8 кадров (~100-260мс). 350мс хватает, а 700+sleep(25)
+                    // на трёх плечах стоили до 2.2с простоя.
                     if (idx == 0 || !fixedBurst) {
-                        camera.cameraControl.setExposureCompensationIndex((origIndex + b).coerceIn(range.lower, range.upper))
-                            .get(700, TimeUnit.MILLISECONDS)
-                        Thread.sleep(25)
+                        try {
+                            camera.cameraControl.setExposureCompensationIndex((origIndex + b).coerceIn(range.lower, range.upper))
+                                .get(350, TimeUnit.MILLISECONDS)
+                        } catch (_: Throwable) {}
                     }
                     val tFrame = android.os.SystemClock.elapsedRealtimeNanos()
                     val bytes = takeOne(imageCapture, quality) ?: throw Exception("frame null")
                     collected.add(bytes)
-                    frameTimesNs.add(tFrame)
+                    burst.submit(collected.size - 1, bytes, tFrame)
                 } catch (t: Throwable) {
                     Log.w(TAG, "bracket $b failed", t)
                     break
                 }
             }
             if (collected.size < 2) throw Exception("hdr short: ${collected.size}")
-            processAndSave(imageCapturer, camera, collected, frameTimesNs, quality, seq, hdrSide(imageCapturer), fixedBurst)
+            processAndSave(imageCapturer, camera, burst, collected, quality, seq, fixedBurst, seriesStart)
             finish(imageCapturer, restore)
         } catch (t: Throwable) {
             Log.w(TAG, "hdr fallback to stock", t)
@@ -276,37 +290,42 @@ object ThmcHdr {
         } catch (_: Throwable) { HDR_WORK_SIDE_FALLBACK }
     }
 
-    private fun sampleFor(bytes: ByteArray, cap: Int): Int {
+    /** 25-й процентиль яркости (0..1): «глубина теней» кадра. 0 = неизвестно (не пропускаем плечо). */
+    private fun shadowQuartile(b: Bitmap?): Float {
+        if (b == null) return 0f
         return try {
-            val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)
-            var s = 1
-            while (maxOf(o.outWidth, o.outHeight) / (s * 2) >= cap) s *= 2
-            s
-        } catch (_: Throwable) { 1 }
+            val y = com.example.thundercam20.analysis.FastGray.of(b, 160).y
+            if (y.isEmpty()) return 0f
+            val s = y.clone(); s.sort()
+            (s[(s.size * 0.25f).toInt().coerceIn(0, s.size - 1)] / 255f)
+        } catch (_: Throwable) { 0f }
     }
 
     private fun processAndSave(
         imageCapturer: ImageCapturer,
         camera: androidx.camera.core.Camera,
+        burst: ThmcBurst,
         frames: List<ByteArray>,
-        frameTimesNs: List<Long>,
         quality: Int,
         seq: Long,
-        workSide: Int = HDR_WORK_SIDE_FALLBACK,
         fixedBurst: Boolean = true,
+        seriesStart: Long = 0L,
     ) {
         val camConfig = imageCapturer.camConfig
         val t0 = System.nanoTime()
+        // Для тоста: полное время серии (AF/EC/съёмка/обработка).
+        val tAll = if (seriesStart > 0L) seriesStart else t0
         fun mark(m: String) {
             try { Log.i(TAG, "hdr stage $m ${(System.nanoTime() - t0) / 1_000_000}ms") } catch (_: Throwable) {}
         }
-        // Декод сразу в рабочее разрешение (inSampleSize — без транзиентного 12Мп).
-        // Параллельно в 2 потока: на 3-5 кадров экономит ~0.3-0.6с.
-        val sample = sampleFor(frames[0], workSide)
-        val (bmps, bmpTimesNs) = ImageSaverShared.decodeParallel(frames, frameTimesNs, sample)
+        // Декод шёл во время съёмки следующих плеч — здесь обычно уже готово.
+        val dec = burst.awaitAll()
+        val bmps = dec.bmps
+        val bmpTimesNs = dec.times
+        val srcIdx = dec.srcIdx
         if (bmps.size < 2) throw Exception("decode short")
-        mark("decode x${bmps.size} s=$sample")
+        mark("decode x${bmps.size} s=${dec.sample}")
+        val workW = bmps[0].width; val workH = bmps[0].height
         progress(imageCapturer, "HDR равнение")
         val selector = com.example.thundercam20.multiframe.FrameSelector()
         try {
@@ -345,6 +364,9 @@ object ThmcHdr {
             val midBytes = frames[0]
             val (fullW, fullH) = ThmcSave.fullSize(midBytes)
             var mergedBmp: Bitmap
+            // Опорный кадр полного разрешения для переноса деталей (пакет 2).
+            var detailBase: ByteArray? = null
+            var detailCrop: android.graphics.Rect? = null
             if (good.size >= 2) {
                 val sharp = selector.selectSharpest(good)
                 val baseIdx = good.indexOf(sharp).coerceAtLeast(0)
@@ -358,12 +380,18 @@ object ThmcHdr {
                     ThmcAlign.focalPxGray(camera, grayW)
                 } catch (_: Throwable) { 0f }
                 var t = System.nanoTime()
-                val aligned = ThmcAlignV2.align(good, baseIdx) { i ->
+                val alignedRes = ThmcAlignV2.alignEx(good, baseIdx) { i ->
                     try {
                         val mag = ThmcGyro.predictedShiftMag(refTime, goodTimes[i], focal)
                         if (mag <= 0f) 16 else ((mag / 4f + 4f).toInt()).coerceIn(4, 16)
                     } catch (_: Throwable) { 16 }
                 }
+                val aligned = alignedRes.frames
+                // Опорный кадр в 12 Мп для переноса деталей: goodIdx → bmps → frames.
+                detailCrop = alignedRes.rects?.getOrNull(baseIdx)
+                detailBase = frames.getOrNull(
+                    srcIdx.getOrNull(goodIdx.getOrNull(baseIdx) ?: -1) ?: -1
+                )
                 dAlign = (System.nanoTime() - t) / 1_000_000
                 mark("align")
                 t = System.nanoTime()
@@ -375,9 +403,14 @@ object ThmcHdr {
                 val calm = try { ThmcGyro.isCalm() } catch (_: Throwable) { true }
                 val merged = if (fixedBurst) {
                     ThmcMerge.mergeWiener(aligned, baseIdx, noise = ThmcMerge.noiseForIso(isoHdr), rejectThr = 20)
-                } else if (aligned.size == 2 || !calm) {
+                } else if (!calm) {
                     ThmcMerge.mergeWeighted(aligned, weights, aligned[baseIdx], 20)
                 } else {
+                    // 2 или 3 плеча — настоящая экспофьюжн-фузия (Мертенс умеет n=2..4).
+                    // Раньше на 2 кадрах шли в mergeWeighted, а усреднение РАЗНЫХ
+                    // экспозиций бесполезно (reject отсекает всё тёмное плечо).
+                    // 2 кадра теперь штатный случай: адаптивно пропускаем +1.5EV,
+                    // когда тени и так не провалены.
                     com.example.thundercam20.imageprocessing.NativeProcessor.mergeMertens(aligned, baseIdx)
                         ?: if (aligned.size >= 3) {
                             val byLuma = aligned.sortedBy {
@@ -389,7 +422,9 @@ object ThmcHdr {
                                 bright = byLuma.last()
                             ) ?: ThmcMerge.mergeWeighted(aligned, weights)
                         } else {
-                            ThmcMerge.mergeWeighted(aligned, weights)
+                            // 2 кадра РАЗНЫХ экспозиций усреднять нельзя: если фьюжн
+                            // недоступен, честно берём опорный (0EV) кадр.
+                            aligned[baseIdx]
                         }
                 }
                 dMerge = (System.nanoTime() - t) / 1_000_000
@@ -398,6 +433,7 @@ object ThmcHdr {
                 mergedBmp = merged
             } else {
                 mergedBmp = sharpAll.copy(Bitmap.Config.ARGB_8888, false) ?: sharpAll
+                detailBase = frames.getOrNull(srcIdx.getOrNull(bmps.indexOf(sharpAll)) ?: -1)
                 mark("single")
             }
             // P0 на РАБОЧЕМ разрешении, один апскейл ПОСЛЕ (было два upscale + P0 на 12Мп).
@@ -426,9 +462,22 @@ object ThmcHdr {
                 workBmp = ThmcP0.processWorkBitmap(mergedBmp, params, ThmcP0.readIso(midBytes), cc.thmcP0Strength / 100f)
                 mark("p0work")
             }
-            var fullBmp: Bitmap = ThmcSave.upscaleTo(workBmp, fullW, fullH)
+            var fullBmp: Bitmap = ThmcSave.upscaleTo(workBmp, fullW, fullH, preferFast = detailBase != null)
             mark("upscale")
             val zoom = cc.thmcExtraZoom
+            // Перенос настоящих деталей 12 Мп опорного кадра: workSide→full был
+            // чистой интерполяцией. Гейты по σ + согласию знака держат шум/гостинг.
+            var detailOk = false
+            if (detailBase != null && workW > 0 && workH > 0 && zoom <= 1.01f) {
+                try {
+                    detailOk = ThmcDetail.inject(
+                        detailBase, fullBmp, detailCrop, workW, workH,
+                        noise = ThmcMerge.noiseForIso(ThmcP0.readIso(midBytes)),
+                        amount = 0.85f
+                    )
+                    mark("detail")
+                } catch (_: Throwable) {}
+            }
             if (zoom > 1.01f) {
                 try {
                     val bw = fullBmp.width; val bh = fullBmp.height
@@ -457,16 +506,20 @@ object ThmcHdr {
             } else {
                 try {
                     // Пост-шарп компенсирует билинейный апскейл workSide→full (1.7x на бюджетнике).
-                    // Было 0.35/9 — мыло после апскейла. 0.55/6 возвращает кромки, порог держит плоское.
+                    // 0.45/8: 0.55/6 давало серые каймы на контурах в фокусе.
+                    // Если детали 12 Мп перенесены — шарпу компенсировать нечего: 0.28.
                     val sh = com.example.thundercam20.imageprocessing.Sharpener()
-                        .unsharpFast(fullBmp, radius = 0.8f, amount = 0.55f, threshold = 6.0)
+                        .unsharpFast(fullBmp, radius = 0.8f, amount = if (detailOk) 0.28f else 0.45f, threshold = 8.0)
                     if (sh !== fullBmp) ThmcBitmaps.release(fullBmp)
                     fullBmp = sh
                     mark("postsharp")
                 } catch (_: Throwable) {}
             }
-            var finalBytes: ByteArray = ThmcSave.encodeWithExif(fullBmp, midBytes, quality)
-            finalBytes = ThmcP0.stampRecipe(finalBytes, try { ThmcP0.readIso(midBytes) } catch (_: Throwable) { 0 })
+            val isoOut = try { ThmcP0.readIso(midBytes) } catch (_: Throwable) { 0 }
+            // Один проход: рецепт пишется вместе с EXIF (было два прохода по JPEG).
+            var finalBytes: ByteArray = ThmcSave.encodeWithExif(
+                fullBmp, midBytes, quality, ThmcP0.recipeDescription(isoOut)
+            )
             val dP0 = (System.nanoTime() - tP0s) / 1_000_000
 
             mark("p0")
@@ -476,7 +529,7 @@ object ThmcHdr {
             }
             ThmcSave.saveFinal(imageCapturer, finalBytes, seq)
             mark("save")
-            val total = (System.nanoTime() - t0) / 1_000_000
+            val total = (System.nanoTime() - tAll) / 1_000_000
             Log.i(TAG, "hdr ok ${total}ms")
             // Цифры на экран: тотал + кто жрёт (align/merge/p0), без логов
             try {
@@ -515,6 +568,7 @@ object ImageSaverShared {
         frames: List<ByteArray>,
         frameTimesNs: List<Long>,
         sample: Int,
+        outSrcIdx: MutableList<Int>? = null,
     ): Pair<MutableList<android.graphics.Bitmap>, MutableList<Long>> {
         val bmps = mutableListOf<android.graphics.Bitmap>()
         val times = mutableListOf<Long>()
@@ -529,37 +583,10 @@ object ImageSaverShared {
                 eh = maxOf(1, (bounds.outHeight + sample - 1) / sample.coerceAtLeast(1))
             }
         } catch (_: Throwable) {}
-        fun decodeOne(bytes: ByteArray): android.graphics.Bitmap? {
-            if (ew > 0 && eh > 0) {
-                try {
-                    val pooled = app.grapheneos.camera.thmc.ThmcBitmaps.obtain(ew, eh)
-                    if (pooled != null) {
-                        val o = android.graphics.BitmapFactory.Options().apply {
-                            inSampleSize = sample
-                            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
-                            inBitmap = pooled
-                            inMutable = true
-                        }
-                        try {
-                            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)?.let { return it }
-                        } catch (_: IllegalArgumentException) {
-                            // Размер не сошёлся — буфер цел, вернуть в пул и декодить обычно.
-                        }
-                        app.grapheneos.camera.thmc.ThmcBitmaps.release(pooled)
-                    }
-                } catch (_: Throwable) {}
-            }
-            return try {
-                val o = android.graphics.BitmapFactory.Options().apply {
-                    inSampleSize = sample
-                    inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
-                }
-                android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)
-            } catch (_: Throwable) { null }
-        }
         if (frames.size == 1) {
-            decodeOne(frames[0])?.let {
+            decodeOne(frames[0], sample, ew, eh)?.let {
                 bmps.add(it); times.add(frameTimesNs.getOrElse(0) { 0L })
+                outSrcIdx?.add(0)
             }
             return bmps to times
         }
@@ -567,12 +594,12 @@ object ImageSaverShared {
         val pool = ThmcExec.decode
         try {
             val futs = frames.map { bytes ->
-                pool.submit<android.graphics.Bitmap?> { decodeOne(bytes) }
+                pool.submit<android.graphics.Bitmap?> { decodeOne(bytes, sample, ew, eh) }
             }
             for (i in futs.indices) {
                 try {
                     val b = futs[i].get(10, TimeUnit.SECONDS)
-                    if (b != null) { bmps.add(b); times.add(frameTimesNs.getOrElse(i) { 0L }) }
+                    if (b != null) { bmps.add(b); times.add(frameTimesNs.getOrElse(i) { 0L }); outSrcIdx?.add(i) }
                 } catch (_: Throwable) {}
             }
         } catch (_: Throwable) {
@@ -580,8 +607,46 @@ object ImageSaverShared {
         return bmps to times
     }
 
-    /** Один синхронный кадр в память (вызывается с фонового потока). Общий для HDR и ночи. */
-    @SuppressLint("RestrictedApi")
+    /**
+     * Декод одного кадра серии в рабочее разрешение (inSampleSize).
+     * ew/eh — ожидаемые габариты для inBitmap из пула (0 = без пула).
+     * Потокобезопасен: у каждого вызова свои Options.
+     */
+    fun decodeOne(
+        bytes: ByteArray,
+        sample: Int,
+        ew: Int = 0,
+        eh: Int = 0,
+    ): android.graphics.Bitmap? {
+        if (ew > 0 && eh > 0) {
+            try {
+                val pooled = app.grapheneos.camera.thmc.ThmcBitmaps.obtain(ew, eh)
+                if (pooled != null) {
+                    val o = android.graphics.BitmapFactory.Options().apply {
+                        inSampleSize = sample
+                        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                        inBitmap = pooled
+                        inMutable = true
+                    }
+                    try {
+                        android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)?.let { return it }
+                    } catch (_: IllegalArgumentException) {
+                        // Размер не сошёлся — буфер цел, вернуть в пул и декодить обычно.
+                    }
+                    app.grapheneos.camera.thmc.ThmcBitmaps.release(pooled)
+                }
+            } catch (_: Throwable) {}
+        }
+        return try {
+            val o = android.graphics.BitmapFactory.Options().apply {
+                inSampleSize = sample
+                inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+            }
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)
+        } catch (_: Throwable) { null }
+    }
+
+    /** Один синхронный кадр в память (вызывается с фонового потока). Общий для HDR и ночи. */    @SuppressLint("RestrictedApi")
     fun takeOne(imageCapture: ImageCapture, quality: Int): ByteArray? {
         val lock = java.util.concurrent.CountDownLatch(1)
         var out: ByteArray? = null

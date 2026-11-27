@@ -14,8 +14,21 @@ import com.example.thundercam20.analysis.FastGray
 object ThmcAlignV2 {
     private const val TAG = "ThmcAlignV2"
 
-    fun align(frames: List<Bitmap>, refIdx: Int, coarseRadiusFor: ((Int) -> Int)? = null): List<Bitmap> {
-        if (frames.size <= 1) return frames
+    /**
+     * Результат равнения: кадры уже скропаны до общего пересечения, rects[i] —
+     * прямоугольник кадра i в координатах ИСХОДНОГО (рабочего) кадра. Нужен
+     * переносу деталей с полного разрешения: там кроп надо повторить в
+     * масштабе full/work. null = кроп неизвестен (фолбэк v1) — детали не переносим.
+     */
+    data class Aligned(val frames: List<Bitmap>, val rects: List<android.graphics.Rect>?)
+
+    fun align(frames: List<Bitmap>, refIdx: Int, coarseRadiusFor: ((Int) -> Int)? = null): List<Bitmap> =
+        alignEx(frames, refIdx, coarseRadiusFor).frames
+
+    fun alignEx(frames: List<Bitmap>, refIdx: Int, coarseRadiusFor: ((Int) -> Int)? = null): Aligned {
+        if (frames.size <= 1) {
+            return Aligned(frames, frames.map { android.graphics.Rect(0, 0, it.width, it.height) })
+        }
         return try {
             val t0 = System.nanoTime()
             val ref = refIdx.coerceIn(frames.indices)
@@ -50,11 +63,21 @@ object ThmcAlignV2 {
                 val oy = (y0 + dy).coerceIn(0, (src.height - h).coerceAtLeast(0))
                 Bitmap.createBitmap(src, ox, oy, w.coerceAtLeast(2), h.coerceAtLeast(2))
             }
+            // Ректы в координатах исходных кадров (тот же ox/oy, что у кропа выше).
+            val rects = frames.indices.map { i ->
+                val (dx, dy) = full[i]
+                val src = frames[i]
+                val w = minOf(cw, src.width - 2); val h = minOf(ch, src.height - 2)
+                val ox = (x0 + dx).coerceIn(0, (src.width - w).coerceAtLeast(0))
+                val oy = (y0 + dy).coerceIn(0, (src.height - h).coerceAtLeast(0))
+                android.graphics.Rect(ox, oy, ox + w.coerceAtLeast(2), oy + h.coerceAtLeast(2))
+            }
             try { Log.i(TAG, "align ok ${(System.nanoTime() - t0) / 1_000_000}ms shifts=$full") } catch (_: Throwable) {}
-            res
+            Aligned(res, rects)
         } catch (t: Throwable) {
             try { Log.w(TAG, "v2 failed, fallback to v1", t) } catch (_: Throwable) {}
-            ThmcAlign.align(frames, refIdx, coarseRadiusFor)
+            // v1 кроп тоже делает, но своих ректов не отдаёт — детали не переносим.
+            Aligned(ThmcAlign.align(frames, refIdx, coarseRadiusFor), null)
         }
     }
 

@@ -1,7 +1,6 @@
 package app.grapheneos.camera.thmc
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.util.Log
 import androidx.camera.core.Camera
@@ -75,11 +74,16 @@ object ThmcNight {
     /** План серии: темнее → больше кадров (√N давит шум). Кап — профилем тира. Чистый. */
     data class Plan(val frames: Int)
 
-    fun planNight(previewL: Float, maxFrames: Int = 6): Plan {
+    /**
+     * План серии: темнее → больше кадров (√N давит шум). Кап — профилем тира. Чистый.
+     * 6→5 на самом дне: √(5/6) = 1.09 по шуму (глазом не отличить), зато −1 кадр
+     * ≈ −0.6с ожидания. Остальное добивают стек-шумодав и перенос деталей 12 Мп.
+     */
+    fun planNight(previewL: Float, maxFrames: Int = 5): Plan {
         val n = when {
-            previewL < 0.12f -> 6
-            previewL < 0.20f -> 5
-            previewL < 0.35f -> 4
+            previewL < 0.12f -> 5
+            previewL < 0.22f -> 4
+            previewL < 0.35f -> 3
             else -> 3 // сумерки: 3 кадра = √3 шума за ~1с, больше — ждём тряску
         }
         return Plan(n.coerceAtMost(maxFrames.coerceAtLeast(2)))
@@ -150,6 +154,7 @@ object ThmcNight {
             } catch (_: Throwable) {}
         }
         try {
+            val seriesStart = System.nanoTime()
             ThmcGyro.start(imageCapturer.mActivity)
             val expState = camera.cameraInfo.exposureState
             val origIndex = expState.exposureCompensationIndex
@@ -181,19 +186,28 @@ object ThmcNight {
                     val pt = factory.createPoint(pv.width / 2f, pv.height / 2f)
                     val action = FocusMeteringAction.Builder(pt, FocusMeteringAction.FLAG_AF)
                         .disableAutoCancel().build()
-                    camera.cameraControl.startFocusAndMetering(action).get(1200, TimeUnit.MILLISECONDS)
-                    Thread.sleep(30)
+                    // 500мс вместо 1200: тап-фокус обычно сходится за 1-3 кадра.
+                    // Не дождались — AF продолжает работать в фоне (disableAutoCancel),
+                    // а «lucky»-QC всё равно выбирает резчайший кадр серии.
+                    camera.cameraControl.startFocusAndMetering(action).get(500, TimeUnit.MILLISECONDS)
                     ThmcZsl.markAf()
                 }
             } catch (t: Throwable) {
                 Log.w(TAG, "af lock skipped", t)
             }
 
-            camera.cameraControl.setExposureCompensationIndex(nightIndex).get(700, TimeUnit.MILLISECONDS)
-            Thread.sleep(25)
+            // EC применяется к следующим запросам быстро: 400мс хватает AE
+            // сойтись на бюджетнике (было 700 + sleep(25) — до 725мс простоя).
+            try {
+                camera.cameraControl.setExposureCompensationIndex(nightIndex).get(400, TimeUnit.MILLISECONDS)
+            } catch (_: Throwable) {}
             val quality = imageCapture.jpegQuality
+            val nightSide = try {
+                ThmcBench.effectiveProfile(imageCapturer.mActivity, camConfig.thmc).nightSide
+            } catch (_: Throwable) { NIGHT_WORK_SIDE }
+            // Декод «на лету»: кадр расшифровывается, пока HAL снимает следующий.
+            val burst = ThmcBurst(nightSide)
             val collected = mutableListOf<ByteArray>()
-            val frameTimesNs = mutableListOf<Long>()
             for (idx in 0 until plan.frames) {
                 if (cancelled.get()) {
                     Log.i(TAG, "night cancelled")
@@ -211,24 +225,22 @@ object ThmcNight {
                 } catch (_: Throwable) {
                     progress(imageCapturer, "Ночь ${idx + 1}/${plan.frames}")
                 }
-                // Гиро-гейт: не снимаем в момент рывка (до 150мс ждём, дальше — как есть).
-                // Было 250мс × 6 кадров = до 1.5с чистого ожидания. Спокойные руки — 0мс и так.
-                try { ThmcGyro.awaitCalm(150) } catch (_: Throwable) {}
+                // Гиро-гейт: не снимаем в момент рывка. Спокойные руки — 0мс и так.
+                // 70мс вместо 150: на 6 кадрах экономит до 0.5с, смаз всё равно
+                // отсекает и QC (кадр не хуже 55% от лучшего).
+                try { ThmcGyro.awaitCalm(70) } catch (_: Throwable) {}
                 try {
                     val tFrame = SystemClock.elapsedRealtimeNanos()
                     val bytes = ImageSaverShared.takeOne(imageCapture, quality)
                         ?: throw Exception("frame null")
                     collected.add(bytes)
-                    frameTimesNs.add(tFrame)
+                    burst.submit(collected.size - 1, bytes, tFrame)
                 } catch (t: Throwable) {
                     Log.w(TAG, "night frame $idx failed", t)
                 }
             }
             if (collected.size < 2) throw Exception("night short: ${collected.size}")
-            val nightSide = try {
-                ThmcBench.effectiveProfile(imageCapturer.mActivity, camConfig.thmc).nightSide
-            } catch (_: Throwable) { NIGHT_WORK_SIDE }
-            processAndSave(imageCapturer, camera, collected, frameTimesNs, quality, seq, nightSide)
+            processAndSave(imageCapturer, camera, burst, collected, quality, seq, seriesStart)
             finish(imageCapturer, restore)
         } catch (t: Throwable) {
             Log.w(TAG, "night fallback to stock", t)
@@ -241,16 +253,6 @@ object ThmcNight {
                 }
             } catch (_: Throwable) {}
         }
-    }
-
-    private fun sampleFor(bytes: ByteArray, cap: Int): Int {
-        return try {
-            val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)
-            var s = 1
-            while (maxOf(o.outWidth, o.outHeight) / (s * 2) >= cap) s *= 2
-            s
-        } catch (_: Throwable) { 1 }
     }
 
     private fun sharpScore(b: Bitmap): Double {
@@ -268,22 +270,28 @@ object ThmcNight {
     private fun processAndSave(
         imageCapturer: ImageCapturer,
         camera: Camera,
+        burst: ThmcBurst,
         frames: List<ByteArray>,
-        frameTimesNs: List<Long>,
         quality: Int,
         seq: Long,
-        nightSide: Int,
+        seriesStart: Long = 0L,
     ) {
         val camConfig = imageCapturer.camConfig
         val t0 = System.nanoTime()
+        // Для тостов: полное время серии (AF/EC/съёмка/обработка), а не только обработка.
+        val tAll = if (seriesStart > 0L) seriesStart else t0
         fun mark(m: String) {
             try { Log.i(TAG, "night stage $m ${(System.nanoTime() - t0) / 1_000_000}ms") } catch (_: Throwable) {}
         }
-        // Параллельный декод в 2 потока (см. HDR): ~0.3-0.6с экономии на 4-6 кадров.
-        val sample = sampleFor(frames[0], nightSide)
-        val (bmps, bmpTimesNs) = ImageSaverShared.decodeParallel(frames, frameTimesNs, sample)
+        // Декод «на лету»: к этому моменту почти всё уже готово (шло во время
+        // съёмки следующих кадров). Раньше здесь тратилось 0.3–0.8с.
+        val dec = burst.awaitAll()
+        val bmps = dec.bmps
+        val bmpTimesNs = dec.times
+        val srcIdx = dec.srcIdx
         if (bmps.size < 2) throw Exception("decode short")
-        mark("decode x${bmps.size} s=$sample")
+        mark("decode x${bmps.size} s=${dec.sample}")
+        val workW = bmps[0].width; val workH = bmps[0].height
         // Страховка от протухшего триггера: первый кадр светлый — серия не нужна.
         // Одиночный с P0 быстрее и чище, чем стек из светлых (тот ещё и пересвечивает).
         val firstL = try {
@@ -292,10 +300,14 @@ object ThmcNight {
         if (firstL > 0.55f) {
             val sharpAll = com.example.thundercam20.multiframe.FrameSelector().selectSharpest(bmps)
             val single = sharpAll.copy(Bitmap.Config.ARGB_8888, false) ?: sharpAll
+            val singleSrc = frames.getOrNull(srcIdx.getOrNull(bmps.indexOf(sharpAll)) ?: -1)
             mark("daylight-single")
-            saveWithP0(imageCapturer, single, frames[frames.size / 2], quality, seq)
+            saveWithP0(
+                imageCapturer, single, frames[frames.size / 2], quality, seq,
+                detailBase = singleSrc, detailCrop = null, workW = workW, workH = workH, noise = 8f
+            )
             mark("p0single")
-            toast(imageCapturer, "Ночь ${(elapsedSec(t0))}с: светло, одиночный")
+            toast(imageCapturer, "Ночь ${(elapsedSec(tAll))}с: светло, одиночный")
             return
         }
         progress(imageCapturer, "Ночь равнение")
@@ -314,10 +326,14 @@ object ThmcNight {
             if (good.size < 2) {
                 val sharpAll = com.example.thundercam20.multiframe.FrameSelector().selectSharpest(bmps)
                 val single = sharpAll.copy(Bitmap.Config.ARGB_8888, false) ?: sharpAll
+                val singleSrc = frames.getOrNull(srcIdx.getOrNull(bmps.indexOf(sharpAll)) ?: -1)
                 mark("single")
-                saveWithP0(imageCapturer, single, frames[frames.size / 2], quality, seq)
+                saveWithP0(
+                    imageCapturer, single, frames[frames.size / 2], quality, seq,
+                    detailBase = singleSrc, detailCrop = null, workW = workW, workH = workH, noise = 8f
+                )
                 mark("p0single")
-                toast(imageCapturer, "Ночь ${(elapsedSec(t0))}с: одиночный (годных ${good.size}/${bmps.size})")
+                toast(imageCapturer, "Ночь ${(elapsedSec(tAll))}с: одиночный (годных ${good.size}/${bmps.size})")
                 return
             }
             val sharp = com.example.thundercam20.multiframe.FrameSelector().selectSharpest(good)
@@ -332,12 +348,19 @@ object ThmcNight {
                 focalPxGray(camera, grayW)
             } catch (_: Throwable) { 0f }
             var t = System.nanoTime()
-            val aligned = ThmcAlignV2.align(good, baseIdx) { i ->
+            val alignedRes = ThmcAlignV2.alignEx(good, baseIdx) { i ->
                 try {
                     val mag = ThmcGyro.predictedShiftMag(refTime, goodTimes[i], focal)
                     if (mag <= 0f) 16 else ((mag / 4f + 4f).toInt()).coerceIn(4, 16)
                 } catch (_: Throwable) { 16 }
             }
+            val aligned = alignedRes.frames
+            // Опорный кадр в полном разрешении для переноса деталей (пакет 2):
+            // goodIdx переводит индекс в good → индекс в bmps, srcIdx → индекс в frames.
+            val detailCrop = alignedRes.rects?.getOrNull(baseIdx)
+            val detailBase = frames.getOrNull(
+                srcIdx.getOrNull(goodIdx.getOrNull(baseIdx) ?: -1) ?: -1
+            )
             val dAlign = (System.nanoTime() - t) / 1_000_000
             mark("align")
             t = System.nanoTime()
@@ -352,10 +375,14 @@ object ThmcNight {
             progress(imageCapturer, "Ночь P0")
             val tP0s = System.nanoTime()
             // Лучший вид: merged уже рабочего размера — P0 на нём, апскейл внутри saveWithP0.
-            saveWithP0(imageCapturer, merged, frames[frames.size / 2], quality, seq)
+            saveWithP0(
+                imageCapturer, merged, frames[frames.size / 2], quality, seq,
+                detailBase = detailBase, detailCrop = detailCrop,
+                workW = workW, workH = workH, noise = noiseNight
+            )
             val dP0 = (System.nanoTime() - tP0s) / 1_000_000
             mark("p0")
-            toast(imageCapturer, "Ночь ${elapsedSec(t0)}с: кадров ${good.size}/${bmps.size}, равнение ${dAlign}мс, мерж ${dMerge}мс, P0 ${dP0}мс")
+            toast(imageCapturer, "Ночь ${elapsedSec(tAll)}с: кадров ${good.size}/${bmps.size}, равнение ${dAlign}мс, мерж ${dMerge}мс, P0 ${dP0}мс")
         } finally {
             for (b in bmps) ThmcBitmaps.release(b)
         }
@@ -375,13 +402,18 @@ object ThmcNight {
         } catch (_: Throwable) {}
     }
 
-    /** P0 на рабочем размере + апскейл + EXIF + сохранение. bmpIn освобождается внутри. */
+    /** P0 на рабочем размере + апскейл + детали 12 Мп + EXIF + сохранение. bmpIn освобождается внутри. */
     private fun saveWithP0(
         imageCapturer: ImageCapturer,
         bmpIn: Bitmap,
         exifSource: ByteArray,
         quality: Int,
         seq: Long,
+        detailBase: ByteArray? = null,
+        detailCrop: android.graphics.Rect? = null,
+        workW: Int = 0,
+        workH: Int = 0,
+        noise: Float = 8f,
     ) {
         val camConfig = imageCapturer.camConfig
         val cc = camConfig
@@ -411,9 +443,21 @@ object ThmcNight {
         }
         // 2. Дотяжка до габаритов исходника (EXIF не врёт).
         val (fullW, fullH) = ThmcSave.fullSize(exifSource)
-        var full: Bitmap = ThmcSave.upscaleTo(work, fullW, fullH)
-        // 3. Зум-кроп на финале без второго шумодава.
+        var full: Bitmap = ThmcSave.upscaleTo(work, fullW, fullH, preferFast = detailBase != null)
+        // 2b. Перенос настоящих деталей с полного разрешения опорного кадра.
+        // Без него 2048→4000 — чистая интерполяция: «чисто, но мыльно».
+        // Гейты (амплитуда + знаковое согласие) не дают вернуть зерно/гостинг.
+        var detailOk = false
         val zoom = cc.thmcExtraZoom
+        if (detailBase != null && workW > 0 && workH > 0 && zoom <= 1.01f) {
+            try {
+                detailOk = ThmcDetail.inject(
+                    detailBase, full, detailCrop, workW, workH, noise,
+                    amount = if (cc.thmcDenoise >= 70) 0.9f else 0.85f
+                )
+            } catch (_: Throwable) {}
+        }
+        // 3. Зум-кроп на финале без второго шумодава.
         if (zoom > 1.01f) {
             try {
                 val bw = full.width; val bh = full.height
@@ -440,16 +484,20 @@ object ThmcNight {
             } catch (t: Throwable) { android.util.Log.w(TAG, "zoom crop failed", t) }
         } else {
             try {
-                // Пост-шарп после билинейного апскейла 2048→full — как в HDR
-                // (0.55/6). Старые 0.35/9 оставляли стек «мыльноватым».
+                // Пост-шарп после апскейла 2048→full. Если детали 12 Мп уже
+                // перенесены — шарпу почти нечего компенсировать: 0.28 (мягче),
+                // иначе 0.45/8 (0.55/6 давало серую кайму вокруг фонарей).
                 val sh = com.example.thundercam20.imageprocessing.Sharpener()
-                    .unsharpFast(full, radius = 0.8f, amount = 0.55f, threshold = 6.0)
+                    .unsharpFast(full, radius = 0.8f, amount = if (detailOk) 0.28f else 0.45f, threshold = 8.0)
                 if (sh !== full) ThmcBitmaps.release(full)
                 full = sh
             } catch (_: Throwable) {}
         }
-        var finalBytes: ByteArray = ThmcSave.encodeWithExif(full, exifSource, quality)
-        finalBytes = ThmcP0.stampRecipe(finalBytes, try { ThmcP0.readIso(exifSource) } catch (_: Throwable) { 0 })
+        val isoOut = try { ThmcP0.readIso(exifSource) } catch (_: Throwable) { 0 }
+        // Один проход: рецепт пишется вместе с EXIF (было два прохода по JPEG).
+        var finalBytes: ByteArray = ThmcSave.encodeWithExif(
+            full, exifSource, quality, ThmcP0.recipeDescription(isoOut)
+        )
         if (camConfig.removeExifAfterCapture) {
             finalBytes = ThmcSave.stripExif(finalBytes)
         }

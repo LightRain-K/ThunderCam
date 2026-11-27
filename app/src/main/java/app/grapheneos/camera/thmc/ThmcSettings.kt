@@ -44,6 +44,7 @@ class ThmcSettings(private val store: KvStore) {
         const val DENOISE = "thmc_denoise"
         const val PRESET = "thmc_preset"
         const val GLOBAL_REFINE = "thmc_global_refine"
+        const val EXPERT_UI = "thmc_expert_ui"
         const val PHOTO_RESOLUTION = "photo_resolution"
     }
 
@@ -58,6 +59,7 @@ class ThmcSettings(private val store: KvStore) {
         const val DENOISE = 60
         const val PRESET = "standard"
         const val GLOBAL_REFINE = true
+        const val EXPERT_UI = false
         const val HDR = false
         const val TRACK = true
         const val AUTO_SCENE = true
@@ -119,6 +121,14 @@ class ThmcSettings(private val store: KvStore) {
     var globalRefine: Boolean
         get() = store.getBoolean(Keys.GLOBAL_REFINE, Defaults.GLOBAL_REFINE)
         set(value) = store.putBoolean(Keys.GLOBAL_REFINE, value)
+
+    /**
+     * Простой или полный (экспертный) вид настроек. Не влияет на саму съёмку —
+     * только на то, сколько ручек показано на экране «Ещё».
+     */
+    var expertUi: Boolean
+        get() = store.getBoolean(Keys.EXPERT_UI, Defaults.EXPERT_UI)
+        set(value) = store.putBoolean(Keys.EXPERT_UI, value)
 
     var autoEv: Boolean
         get() = store.getBoolean(Keys.AUTO_EV, Defaults.AUTO_EV)

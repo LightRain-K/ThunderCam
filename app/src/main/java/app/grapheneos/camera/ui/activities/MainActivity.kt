@@ -794,6 +794,27 @@ open class MainActivity : AppCompatActivity(),
 
         refreshThmcModeBadge()
 
+        // Онбординг первого запуска: одно короткое объяснение, что камера делает сама.
+        // Показываем только после выданного разрешения (не поверх системного диалога)
+        // и только один раз — флаг в commons, а не в настройках.
+        if (javaClass == MainActivity::class.java && hasCameraPermission()) {
+            try {
+                val prefs = getSharedPreferences("commons", MODE_PRIVATE)
+                if (!prefs.getBoolean("thmc_welcome_shown", false)) {
+                    prefs.edit().putBoolean("thmc_welcome_shown", true).apply()
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.thmc_welcome_title)
+                        .setMessage(R.string.thmc_welcome_text)
+                        .setPositiveButton(R.string.thmc_welcome_ok, null)
+                        .setNeutralButton(R.string.thmc_welcome_setup) { _, _ ->
+                            MoreSettings.start(this)
+                        }
+                        .setCancelable(true)
+                        .show()
+                }
+            } catch (_: Throwable) {}
+        }
+
         // ThunderCam мастер калибровки: после 5-го фото, не на старте.
         // Первый запуск — только видоискатель, никаких модалок.
         if (javaClass == MainActivity::class.java && !camConfig.thmcCalibrated &&
@@ -2282,28 +2303,34 @@ open class MainActivity : AppCompatActivity(),
     fun refreshThmcModeBadge() {
         try {
             val badge: TextView = binding.thmcSceneBadge
-            val parts = ArrayList<String>()
-            if (!camConfig.isVideoMode && !camConfig.isQRMode) {
-                if (camConfig.thmcNightAuto) parts.add(getString(R.string.thmc_badge_night))
-                if (camConfig.thmcHdr) parts.add(getString(R.string.thmc_badge_hdr))
-                // Что определила авто-сцена на последнем кадре (не старше 2 мин).
-                if (camConfig.thmcAutoScene) {
-                    try {
-                        val st = app.grapheneos.camera.thmc.ThmcTrackState
-                        val age = System.currentTimeMillis() - st.lastSceneTs
-                        val pid = st.lastScenePreset
-                        if (pid.isNotEmpty() && pid != app.grapheneos.camera.thmc.ThmcPresets.ID_CUSTOM && age in 0..120000) {
-                            parts.add(getString(app.grapheneos.camera.thmc.ThmcPresets.byId(pid).titleRes))
-                        }
-                    } catch (_: Throwable) {}
-                }
-            }
-            if (parts.isEmpty()) {
+            if (camConfig.isVideoMode || camConfig.isQRMode) {
                 badge.visibility = View.GONE
-            } else {
-                badge.text = parts.joinToString(" + ")
-                badge.visibility = View.VISIBLE
+                return
             }
+            // Мастер выключен — честно говорим, почему кадры «как из обычной камеры».
+            val thunder = try { camConfig.thmcThunder } catch (_: Throwable) { true }
+            if (!thunder) {
+                badge.text = getString(R.string.thmc_badge_off)
+                badge.visibility = View.VISIBLE
+                return
+            }
+            val parts = ArrayList<String>()
+            parts.add(getString(R.string.thmc_badge_on))
+            if (camConfig.thmcNightAuto) parts.add(getString(R.string.thmc_badge_night))
+            if (camConfig.thmcHdr) parts.add(getString(R.string.thmc_badge_hdr))
+            // Что определила авто-сцена на последнем кадре (не старше 2 мин).
+            if (camConfig.thmcAutoScene) {
+                try {
+                    val st = app.grapheneos.camera.thmc.ThmcTrackState
+                    val age = System.currentTimeMillis() - st.lastSceneTs
+                    val pid = st.lastScenePreset
+                    if (pid.isNotEmpty() && pid != app.grapheneos.camera.thmc.ThmcPresets.ID_CUSTOM && age in 0..120000) {
+                        parts.add(getString(app.grapheneos.camera.thmc.ThmcPresets.byId(pid).titleRes))
+                    }
+                } catch (_: Throwable) {}
+            }
+            badge.text = parts.joinToString(" · ")
+            badge.visibility = View.VISIBLE
         } catch (_: Throwable) {}
     }
 

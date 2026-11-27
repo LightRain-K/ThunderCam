@@ -225,8 +225,8 @@
     <string name="wait_for_focus_lock">Ждать фокус</string>
     <string name="invalid_photo_quality_value">Некорректное качество фото</string>
 
-    <string name="thmc_p0_title">Обработка фото ThunderCam</string>
-    <string name="thmc_p0_desc">Тон, контраст и шумодав на каждом фото. Выкл = стоковая съёмка.</string>
+    <string name="thmc_p0_title">Движок ThunderCam</string>
+    <string name="thmc_p0_desc">Тон, контраст, цвет и шумодав. Выкл — как в обычной камере.</string>
     <string name="thmc_p0_strength_title">Сила обработки</string>
     <string name="thmc_p0_strength_desc">Сколько обработки подмешивать, 1–100%.</string>
     <string name="thmc_p0_strength_limit">Сила обработки — от %1$d до %2$d</string>
@@ -243,17 +243,17 @@
     <string name="thmc_sr_title">Качественный апскейл (медленно)</string>
     <string name="thmc_sr_desc">Резче, но медленнее. Выкл = быстрый.</string>
     <string name="thmc_sr_blend_title">Сила ИИ-апскейла</string>
-    <string name="thmc_recipe_reset_title">Сбросить рецепт P0</string>
-    <string name="thmc_recipe_reset_desc">Вернуть начальные значения слайдеров</string>
-    <string name="thmc_recipe_reset_done">Рецепт сброшен к начальному</string>
+    <string name="thmc_recipe_reset_title">Вернуть стандартный стиль</string>
+    <string name="thmc_recipe_reset_desc">Сбросить ползунки стиля к заводским</string>
+    <string name="thmc_recipe_reset_done">Стиль сброшен к стандартному</string>
     <string name="thmc_track_title">Слежение за фокусом (ThunderCam)</string>
     <string name="thmc_track_desc">Долгий тап по объекту — фокус ведёт его (фото и видео). Тап сбрасывает.</string>
-    <string name="thmc_auto_scene_title">Авто-сцена (ThunderCam)</string>
-    <string name="thmc_auto_scene_desc">Камера сама определяет сюжет и включает рецепт (ночь/портрет/еда/текст/пейзаж). Он главный, слайдеры — поправка 35%. Выкл = только ручной рецепт.</string>
+    <string name="thmc_auto_scene_title">Определять сюжет</string>
+    <string name="thmc_auto_scene_desc">Камера сама понимает, что в кадре (ночь, портрет, еда, текст, пейзаж), и подбирает обработку. Выкл = только твой стиль.</string>
     <string name="thmc_global_refine_title">Доводка деталей (ThunderCam)</string>
     <string name="thmc_global_refine_desc">Возвращает мелкую фактуру после шумодава. Выкл = только сглаживание.</string>
-    <string name="thmc_hdr_title">ThunderCam HDR (3 кадра)</string>
-    <string name="thmc_hdr_desc">Серия 0/−/+ с равнением и мержем. Медленнее, ночью резче. Выкл = одиночный сток.</string>
+    <string name="thmc_hdr_title">HDR (широкий диапазон)</string>
+    <string name="thmc_hdr_desc">Снимает 2–3 кадра с разной яркостью и склеивает: видно и света, и тени. Дольше обычного снимка.</string>
     <string name="thmc_enhance_title">Улучшить фото (ThunderCam)</string>
     <string name="thmc_enhance_ai">ИИ-свет (Zero-DCE)</string>
     <string name="thmc_enhance_ai_strength">Сила ИИ-света</string>
@@ -270,8 +270,8 @@
     <string name="thmc_queue_busy">Ещё обрабатываю… секунду</string>
     <string name="thmc_hdr_busy_stock">HDR ещё работает — снято одиночным кадром</string>
     <string name="thmc_series_zoom_single">Зум %1$s: серия выкл (дрожь) — снято одиночным</string>
-    <string name="thmc_night_title">Ночь-авто (ThunderCam)</string>
-    <string name="thmc_night_desc">Тёмная сцена снимает серией и складывает. Выкл = ночью одиночный.</string>
+    <string name="thmc_night_title">Ночной режим</string>
+    <string name="thmc_night_desc">В темноте снимает серию кадров и склеивает их: меньше шума и больше деталей. Выкл — один кадр.</string>
     <string name="thmc_night_hold">держите ровно</string>
     <string name="thmc_night_freeze">замрите…</string>
     <string name="thmc_bench_offer_title">Проверить скорость телефона?</string>
@@ -289,7 +289,22 @@
     <string name="thmc_bench_setting_desc">Перезапустить замер (кадры ночи, тайлы зума)</string>
     <string name="thmc_srmodel_title">SR-модель (ThunderCam)</string>
     <string name="thmc_srmodel_desc">Вшитая, мощная по ссылке или своя</string>
-    <string name="thmc_section_title">ThunderCam</string>
+    <string name="thmc_section_title">Улучшение фото</string>
+    <!-- Простой / экспертный режимы: понятный верхний уровень + всё под капотом. -->
+    <string name="thmc_smart_title">Умное улучшение фото</string>
+    <string name="thmc_smart_desc">Один переключатель для ночного режима, HDR, авто-сюжета и обработки. Выкл — обычная камера.</string>
+    <string name="thmc_expert_title">Показать все настройки</string>
+    <string name="thmc_expert_desc">Ползунки, экспозиция, апскейл, облако, бенчмарк, RAW. Для тех, кто понимает.</string>
+    <string name="thmc_summary">Сейчас: %1$s · %2$s · %3$s · %4$s</string>
+    <string name="thmc_sum_style">стиль «%1$s»</string>
+    <string name="thmc_sum_style_auto">стиль авто</string>
+    <string name="thmc_sum_night_on">ночь авто</string>
+    <string name="thmc_sum_night_off">ночь вручную</string>
+    <string name="thmc_sum_hdr_on">HDR вкл</string>
+    <string name="thmc_sum_hdr_off">без HDR</string>
+    <string name="thmc_sum_scene_on">авто-сюжет</string>
+    <string name="thmc_sum_scene_off">сюжет вручную</string>
+    <string name="thmc_sum_off">улучшение выкл</string>
     <string name="thmc_enhance_loading">Загрузка фото…</string>
     <string name="thmc_enhance_tool_ai">ИИ-свет</string>
     <string name="thmc_enhance_pro">Апскейл Pro</string>
@@ -312,8 +327,8 @@
     <string name="thmc_video_working">Обработка… %d%%</string>
     <string name="thmc_video_done">Видео улучшено: копия _THMC</string>
     <string name="thmc_video_fail">Не получилось улучшить видео</string>
-    <string name="thmc_preset_title">Пресет рецепта</string>
-    <string name="thmc_preset_desc">Один тап вместо шести слайдеров</string>
+    <string name="thmc_preset_title">Стиль съёмки</string>
+    <string name="thmc_preset_desc">Готовые наборы: стандарт, еда, портрет, ночь, документ, пейзаж</string>
     <string name="thmc_preset_standard">Стандарт</string>
     <string name="thmc_preset_standard_desc">Сбалансировано на каждый день</string>
     <string name="thmc_preset_food">Еда</string>
@@ -333,10 +348,11 @@
     <string name="thmc_raw_working">RAW %1$d/3…</string>
     <string name="thmc_raw_done">DNG ×%1$d сохранены</string>
     <string name="thmc_raw_fail">RAW не вышел</string>
-    <string name="thmc_raw_cancelled">RAW отменён</string>    <string name="thmc_sub_series">Серии: ночь и HDR</string>
-    <string name="thmc_sub_zoom">Зум и увеличение</string>
+    <string name="thmc_raw_cancelled">RAW отменён</string>
+    <string name="thmc_sub_series">Ночь и HDR</string>
+    <string name="thmc_sub_zoom">Зум и апскейл</string>
     <string name="thmc_sub_cloud">Облако</string>
-    <string name="thmc_advanced_title">Продвинутые</string>
+    <string name="thmc_advanced_title">Тонкая настройка движка</string>
     <string name="thmc_badge_night">Авто: ночь</string>
     <string name="thmc_badge_hdr">HDR</string>
     <string name="thmc_tap_to_shoot">тап — снять сейчас</string>
@@ -363,4 +379,36 @@
     <string name="thmc_enhance_saved">Улучшенная копия сохранена</string>
     <string name="thmc_enhance_failed">Не получилось улучшить фото</string>
     <string name="thmc_enhance_video_only">Улучшение только для фото</string>
+    <string name="settings_label_location">Геометки</string>
+    <string name="settings_label_aspect">Кадр</string>
+    <string name="settings_label_torch">Фонарь</string>
+    <string name="settings_label_flash">Вспышка</string>
+    <string name="settings_label_grid">Сетка</string>
+
+    <!-- Онбординг первого запуска -->
+    <string name="thmc_welcome_title">Добро пожаловать в ThunderCam</string>
+    <string name="thmc_welcome_text">Камера сама улучшает каждое фото: поднимает тени, убирает шум и делает цвет живее.\n\n• В темноте и при контровом свете снимает серию и склеивает — резче и чище.\n• Всё можно выключить и настроить: «Ещё» → «Улучшение фото».\n\nСделайте несколько снимков — остальное камера возьмёт на себя.</string>
+    <string name="thmc_welcome_ok">Понятно</string>
+    <string name="thmc_welcome_setup">Настроить</string>
+
+    <!-- Справка «как это работает» -->
+    <string name="thmc_help_row_title">Как это работает?</string>
+    <string name="thmc_help_row_desc">Коротко о каждом пункте</string>
+    <string name="thmc_help_title">Как это работает?</string>
+    <string name="thmc_help_text">Стиль — готовый набор цвета и контраста.\nШумодав — сколько убирать зерно; «Авто» — камера решает сама.\nНочной режим — в темноте снимает серию и склеивает: меньше шума и больше деталей.\nHDR — 2–3 кадра с разной яркостью: видно и света, и тени.\nОпределять сюжет — камера сама подбирает обработку под кадр.\nПоказать все настройки — ползунки и технические опции.</string>
+
+    <!-- Профили качества -->
+    <string name="thmc_profile_title">Профиль качества</string>
+    <string name="thmc_profile_fast">Быстрый</string>
+    <string name="thmc_profile_fast_desc">Меньше обработки и шумодава — быстрее.</string>
+    <string name="thmc_profile_balanced">Сбалансированный</string>
+    <string name="thmc_profile_balanced_desc">Рекомендуется: чисто и без задержек.</string>
+    <string name="thmc_profile_max">Максимум качества</string>
+    <string name="thmc_profile_max_desc">Сильнее шумодав и ИИ-апскейл зума. Медленнее.</string>
+    <string name="thmc_profile_summary">Шумодав %1$d%% · %2$s</string>
+    <string name="thmc_profile_sr_off">апскейл обычный</string>
+    <string name="thmc_profile_sr_on">ИИ-апскейл зума</string>
+
+    <string name="thmc_badge_on">Улучшение</string>
+    <string name="thmc_badge_off">Улучшение выкл</string>
 </resources>

@@ -20,10 +20,11 @@ class ThmcNightTest {
         assertFalse(ThmcNight.isNight(0.0f))
     }
 
-    @Test fun darker_scene_means_more_frames_capped_at_6() {
-        assertEquals(6, ThmcNight.planNight(0.05f).frames)
-        assertEquals(5, ThmcNight.planNight(0.15f).frames)
-        assertEquals(4, ThmcNight.planNight(0.30f).frames)
+    @Test fun darker_scene_means_more_frames_capped_at_5() {
+        // 6→5 на самом дне: шум растёт на √(5/6)=9%, ожидание падает на ~0.6с.
+        assertEquals(5, ThmcNight.planNight(0.05f).frames)
+        assertEquals(4, ThmcNight.planNight(0.15f).frames)
+        assertEquals(3, ThmcNight.planNight(0.30f).frames)
         // Сумеречный ти́р: 3 кадра — √3 шума без долгой стойки.
         assertEquals(3, ThmcNight.planNight(0.40f).frames)
     }

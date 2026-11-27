@@ -41,6 +41,49 @@ object NativeProcessor {
     /** Треугольный dither ±1 LSB перед JPEG-энкодом (in-place). false = нет натива. */
     @JvmStatic external fun ditherBitmap(bmp: Bitmap): Boolean
 
+    /** Локальный контраст по low-freq (±12, halo-guard) in-place. false = нет натива. */
+    @JvmStatic external fun localContrastBitmap(bmp: Bitmap, amount: Float): Boolean
+
+    /**
+     * Перенос микродеталей полного разрешения на финал серии (in-place в dst).
+     * Сэмплирование базы по (sx,sy)/(ox,oy) — соответствие пиксельных сеток.
+     */
+    @JvmStatic external fun detailTransferBitmap(
+        base: Bitmap, dst: Bitmap,
+        scaleX: Float, scaleY: Float, offX: Float, offY: Float,
+        amount: Float, thr: Float
+    ): Boolean
+
+    /**
+     * Обёртка локального контраста. Любая проблема → false (вызыватель делает
+     * Kotlin-фолбэк). Требует mutable ARGB_8888.
+     */
+    fun localContrast(bmp: Bitmap, amount: Float): Boolean {
+        if (!loaded) return false
+        return try {
+            if (bmp.config != Bitmap.Config.ARGB_8888 || !bmp.isMutable) false
+            else localContrastBitmap(bmp, amount)
+        } catch (_: Throwable) { false }
+    }
+
+    /**
+     * Обёртка переноса деталей: base — полное разрешение, dst — финал (mutable).
+     * false при любой проблеме (вызыватель просто пропускает стадию).
+     */
+    fun detailTransfer(
+        base: Bitmap, dst: Bitmap,
+        scaleX: Float, scaleY: Float,
+        amount: Float, thr: Float,
+        offX: Float = 0f, offY: Float = 0f,
+    ): Boolean {
+        if (!loaded) return false
+        return try {
+            if (base.config != Bitmap.Config.ARGB_8888 || dst.config != Bitmap.Config.ARGB_8888) false
+            else if (!dst.isMutable) false
+            else detailTransferBitmap(base, dst, scaleX, scaleY, offX, offY, amount, thr)
+        } catch (_: Throwable) { false }
+    }
+
     /**
      * Обёртка dither: любая проблема → false, кадр не тронут.
      * Точка вызова — строго перед compress(JPEG): после дизера никакой

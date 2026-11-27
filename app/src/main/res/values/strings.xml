@@ -237,8 +237,8 @@
     <string name="wait_for_focus_lock">Wait for Focus Lock</string>
     <string name="invalid_photo_quality_value">Invalid value set for photo quality</string>
 
-    <string name="thmc_p0_title">ThunderCam photo processing</string>
-    <string name="thmc_p0_desc">Tone, contrast and denoise on every photo. Off = stock capture.</string>
+    <string name="thmc_p0_title">ThunderCam engine</string>
+    <string name="thmc_p0_desc">Tone, contrast, colour and denoise. Off = stock capture.</string>
     <string name="thmc_p0_strength_title">Processing strength</string>
     <string name="thmc_p0_strength_desc">How much of ThunderCam processing to blend in. 0% = off.</string>
     <string name="thmc_p0_strength_limit">Processing strength can only be between %1$d and %2$d</string>
@@ -255,21 +255,21 @@
     <string name="thmc_sr_title">Quality upscale (slow)</string>
     <string name="thmc_sr_desc">Sharper but slower. Off = fast.</string>
     <string name="thmc_sr_blend_title">AI upscale strength</string>
-    <string name="thmc_recipe_reset_title">Reset P0 recipe</string>
-    <string name="thmc_recipe_reset_desc">Back to initial slider values</string>
-    <string name="thmc_recipe_reset_done">Recipe reset to initial</string>
+    <string name="thmc_recipe_reset_title">Restore default style</string>
+    <string name="thmc_recipe_reset_desc">Reset style sliders to factory values</string>
+    <string name="thmc_recipe_reset_done">Style reset to defaults</string>
     <string name="thmc_track_title">Focus tracking (ThunderCam)</string>
     <string name="thmc_track_desc">Long-press an object in photo mode to keep focus on it. Tap resets.</string>
-    <string name="thmc_auto_scene_title">Auto scene (ThunderCam)</string>
-    <string name="thmc_auto_scene_desc">The camera detects the subject and applies its recipe (night/portrait/food/text/landscape). It leads, your sliders adjust 35%. Off = manual recipe only.</string>
+    <string name="thmc_auto_scene_title">Detect the subject</string>
+    <string name="thmc_auto_scene_desc">The camera recognises what is in frame (night, portrait, food, text, landscape) and picks the processing itself. Off = your style only.</string>
     <string name="thmc_global_refine_title">Detail recovery (ThunderCam)</string>
     <string name="thmc_global_refine_desc">Brings back fine texture after denoise. Off = smoothing only.</string>
     <string name="thmc_auto_ev_title">Auto-EV vs blowout</string>
     <string name="thmc_auto_ev_desc">Softly pulls down HAL overexposure before the shot (down only, then restores). Otherwise mid light pushes ISO up and blows the frame.</string>
     <string name="thmc_manual_ev_title">Manual shutter instead of ISO</string>
     <string name="thmc_manual_ev_desc">Own AE loop: same brightness, longer shutter + low ISO. Calibrated from EXIF. First frame of a scene is HAL.</string>
-    <string name="thmc_hdr_title">ThunderCam HDR (3 shots)</string>
-    <string name="thmc_hdr_desc">0/−/+ bracket burst with align + merge. Slower, sharper at night. Off = single stock shot.</string>
+    <string name="thmc_hdr_title">HDR (wide range)</string>
+    <string name="thmc_hdr_desc">Shoots 2–3 frames at different brightness and merges them: both highlights and shadows stay visible. Slower than a normal shot.</string>
     <string name="thmc_enhance_title">Enhance photo (ThunderCam)</string>
     <string name="thmc_enhance_ai">AI light (Zero-DCE)</string>
     <string name="thmc_enhance_ai_strength">AI light strength</string>
@@ -291,8 +291,8 @@
     <string name="thmc_queue_busy">Still processing… one moment</string>
     <string name="thmc_hdr_busy_stock">HDR still running — took a single shot</string>
     <string name="thmc_series_zoom_single">Zoom %1$s: burst off (shake) — single shot</string>
-    <string name="thmc_night_title">Night auto (ThunderCam)</string>
-    <string name="thmc_night_desc">Dark scene shoots a burst and stacks it. Off = single shot at night.</string>
+    <string name="thmc_night_title">Night mode</string>
+    <string name="thmc_night_desc">In the dark it shoots a burst and stacks it — less noise, more detail. Off = single shot.</string>
     <string name="thmc_night_hold">hold steady</string>
     <string name="thmc_night_freeze">freeze…</string>
     <string name="thmc_bench_offer_title">Check your phone\'s speed?</string>
@@ -320,8 +320,8 @@
     <string name="thmc_video_working">Working… %d%%</string>
     <string name="thmc_video_done">Video enhanced: _THMC copy</string>
     <string name="thmc_video_fail">Couldn\'t enhance video</string>
-    <string name="thmc_preset_title">Recipe preset</string>
-    <string name="thmc_preset_desc">One tap instead of six sliders</string>
+    <string name="thmc_preset_title">Shooting style</string>
+    <string name="thmc_preset_desc">Ready-made setups: standard, food, portrait, night, document, landscape</string>
     <string name="thmc_preset_standard">Standard</string>
     <string name="thmc_preset_standard_desc">Balanced everyday</string>
     <string name="thmc_preset_food">Food</string>
@@ -342,14 +342,30 @@
     <string name="thmc_raw_done">DNG ×%1$d saved</string>
     <string name="thmc_raw_fail">RAW burst failed</string>
     <string name="thmc_raw_cancelled">RAW cancelled</string>
-    <string name="thmc_sub_series">Bursts: night &amp; HDR</string>
+    <string name="thmc_sub_series">Night &amp; HDR</string>
     <string name="thmc_sub_zoom">Zoom &amp; upscale</string>
     <string name="thmc_sub_cloud">Cloud</string>
-    <string name="thmc_advanced_title">Advanced</string>
+    <string name="thmc_advanced_title">Engine fine-tuning</string>
     <string name="thmc_badge_night">Auto: night</string>
     <string name="thmc_badge_hdr">HDR</string>
     <string name="thmc_tap_to_shoot">tap to shoot now</string>
-    <string name="thmc_section_title">ThunderCam</string>
+    <string name="thmc_section_title">Photo enhancement</string>
+
+    <!-- Простой / экспертный режимы: понятный верхний уровень + всё под капотом. -->
+    <string name="thmc_smart_title">Smart photo enhancement</string>
+    <string name="thmc_smart_desc">One switch for night mode, HDR, auto subject and processing. Off = plain camera.</string>
+    <string name="thmc_expert_title">Show all settings</string>
+    <string name="thmc_expert_desc">Sliders, exposure, upscale, cloud, benchmark, RAW. For advanced users.</string>
+    <string name="thmc_summary">Now: %1$s · %2$s · %3$s · %4$s</string>
+    <string name="thmc_sum_style">style “%1$s”</string>
+    <string name="thmc_sum_style_auto">style auto</string>
+    <string name="thmc_sum_night_on">night auto</string>
+    <string name="thmc_sum_night_off">night manual</string>
+    <string name="thmc_sum_hdr_on">HDR on</string>
+    <string name="thmc_sum_hdr_off">no HDR</string>
+    <string name="thmc_sum_scene_on">auto subject</string>
+    <string name="thmc_sum_scene_off">subject manual</string>
+    <string name="thmc_sum_off">enhancement off</string>
     <string name="thmc_enhance_loading">Loading photo…</string>
     <string name="thmc_enhance_tool_ai">AI light</string>
     <string name="thmc_enhance_pro">Pro upscale</string>
@@ -385,4 +401,36 @@
     <string name="thmc_enhance_saved">Enhanced copy saved</string>
     <string name="thmc_enhance_failed">Could not enhance this photo</string>
     <string name="thmc_enhance_video_only">Enhance works on photos only</string>
+    <string name="settings_label_location">Location</string>
+    <string name="settings_label_aspect">Frame</string>
+    <string name="settings_label_torch">Light</string>
+    <string name="settings_label_flash">Flash</string>
+    <string name="settings_label_grid">Grid</string>
+
+    <!-- Онбординг первого запуска -->
+    <string name="thmc_welcome_title">Welcome to ThunderCam</string>
+    <string name="thmc_welcome_text">The camera improves every shot: lifts shadows, removes noise and makes colour livelier.\n\n• In the dark and in backlight it shoots a burst and merges it — sharper and cleaner.\n• Everything can be turned off or tuned: More → Photo enhancement.\n\nTake a few shots — the camera does the rest.</string>
+    <string name="thmc_welcome_ok">Got it</string>
+    <string name="thmc_welcome_setup">Set up</string>
+
+    <!-- Справка «как это работает» -->
+    <string name="thmc_help_row_title">How it works</string>
+    <string name="thmc_help_row_desc">A short note on every item</string>
+    <string name="thmc_help_title">How it works</string>
+    <string name="thmc_help_text">Style — a ready-made set of colour and contrast.\nDenoise — how much grain to remove; Auto lets the camera decide.\nNight mode — in the dark it shoots a burst and stacks it: less noise, more detail.\nHDR — 2–3 frames at different brightness: both highlights and shadows stay visible.\nDetect the subject — the camera picks processing for the scene.\nShow all settings — sliders and technical options.</string>
+
+    <!-- Профили качества -->
+    <string name="thmc_profile_title">Quality profile</string>
+    <string name="thmc_profile_fast">Fast</string>
+    <string name="thmc_profile_fast_desc">Less processing and denoise — quicker.</string>
+    <string name="thmc_profile_balanced">Balanced</string>
+    <string name="thmc_profile_balanced_desc">Recommended: clean and snappy.</string>
+    <string name="thmc_profile_max">Maximum quality</string>
+    <string name="thmc_profile_max_desc">Stronger denoise and AI zoom upscale. Slower.</string>
+    <string name="thmc_profile_summary">Denoise %1$d%% · %2$s</string>
+    <string name="thmc_profile_sr_off">regular upscale</string>
+    <string name="thmc_profile_sr_on">AI zoom upscale</string>
+
+    <string name="thmc_badge_on">Enhancement</string>
+    <string name="thmc_badge_off">Enhancement off</string>
 </resources>

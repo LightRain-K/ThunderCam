@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <vector>
 #include <android/bitmap.h>
 
 // Один проход P0 вместо 4 Kotlin: tone + contrast + sat + wb + NEON friendly
@@ -104,17 +105,21 @@ Java_com_example_thundercam20_imageprocessing_NativeProcessor_processPixels(
 
         // Filmic-плечо: клипп сенсора (255,255,255) данных не имеет — вместо жесткого
         // среза мягко desat+jкомпрессия к белому. Деталей не вернет (их нет), но вместо
-        // рваного пятна с цветной каймой будет плавный переход. Трогает только >235.
+        // рваного пятна с цветной каймой будет плавный переход.
         {
             float mx = fr; if (fg > mx) mx = fg; if (fb > mx) mx = fb;
-            if (mx > 235.0f) {
-                float f = (mx - 235.0f) / 20.0f; if (f > 1.5f) f = 1.5f;
+            if (mx > 236.0f) {
+                // smoothstep-плечо 236→255: у самого клиппа гасим цветную кайму
+                // (фонари/окна), но белое НЕ сереет — компрессия только от 250.
+                float t = (mx - 236.0f) / 19.0f;
+                if (t > 1.0f) t = 1.0f;
+                float s = t * t * (3.0f - 2.0f * t);
                 float lumw = 0.299f * fr + 0.587f * fg + 0.114f * fb;
-                float d = f * 0.6f; if (d > 0.9f) d = 0.9f;
+                float d = s * 0.55f;
                 fr += (lumw - fr) * d; fg += (lumw - fg) * d; fb += (lumw - fb) * d;
                 float mx2 = fr; if (fg > mx2) mx2 = fg; if (fb > mx2) mx2 = fb;
-                if (mx2 > 235.0f) {
-                    float k = (235.0f + (mx2 - 235.0f) * 0.5f) / mx2;
+                if (mx2 > 250.0f) {
+                    float k = (250.0f + (mx2 - 250.0f) * 0.7f) / mx2;
                     fr *= k; fg *= k; fb *= k;
                 }
             }
@@ -993,17 +998,20 @@ Java_com_example_thundercam20_imageprocessing_NativeProcessor_processDirect(
             g = gray + (g - gray) * satFactor;
             b = gray + (b - gray) * satFactor;
             r *= rGain; g *= gGain; b = (b + bBias) * bGain;
-            // Filmic-плечо как в processPixels: мягкий переход вместо рваного клиппа.
+            // Filmic-плечо как в processPixels: smoothstep-desat у клиппа,
+            // компрессия только от 250 — белое не сереет.
             {
                 float mx = r; if (g > mx) mx = g; if (b > mx) mx = b;
-                if (mx > 235.0f) {
-                    float f = (mx - 235.0f) / 20.0f; if (f > 1.5f) f = 1.5f;
+                if (mx > 236.0f) {
+                    float t = (mx - 236.0f) / 19.0f;
+                    if (t > 1.0f) t = 1.0f;
+                    float s = t * t * (3.0f - 2.0f * t);
                     float lumw = 0.299f * r + 0.587f * g + 0.114f * b;
-                    float d = f * 0.6f; if (d > 0.9f) d = 0.9f;
+                    float d = s * 0.55f;
                     r += (lumw - r) * d; g += (lumw - g) * d; b += (lumw - b) * d;
                     float mx2 = r; if (g > mx2) mx2 = g; if (b > mx2) mx2 = b;
-                    if (mx2 > 235.0f) {
-                        float k = (235.0f + (mx2 - 235.0f) * 0.5f) / mx2;
+                    if (mx2 > 250.0f) {
+                        float k = (250.0f + (mx2 - 250.0f) * 0.7f) / mx2;
                         r *= k; g *= k; b *= k;
                     }
                 }
@@ -1117,4 +1125,271 @@ wfail:
     if (pO) AndroidBitmap_unlockPixels(env, out);
     for (int k = 0; k < n; k++) { if (fPtr[k]) AndroidBitmap_unlockPixels(env, fObj[k]); if (fObj[k]) env->DeleteLocalRef(fObj[k]); }
     return JNI_FALSE;
+}
+
+// ===========================================================================
+// Локальный контраст (структура) в нативе. Тот же алгоритм, что
+// P0Lite.localContrast: low-freq = box-среднее 4×4 → билинейный подъём,
+// diff = luma − lowLuma, halo-guard на кромках (×0.30/×0.55) и кап ±12.
+// Kotlin-версия на 12 Мп тратила 150–250 мс (float-цикл + 3 IntArray),
+// натив — один проход по пикселям и ~1 МБ вспомогательной памяти.
+// ===========================================================================
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_example_thundercam20_imageprocessing_NativeProcessor_localContrastBitmap(
+        JNIEnv* env, jobject /* this */, jobject bmp, jfloat amount) {
+    AndroidBitmapInfo info;
+    if (AndroidBitmap_getInfo(env, bmp, &info) < 0) return JNI_FALSE;
+    if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) return JNI_FALSE;
+    uint32_t w = info.width, h = info.height;
+    if (w < 16 || h < 16) return JNI_FALSE;
+    const uint32_t sw = w / 4, sh = h / 4;
+    if (sw < 2 || sh < 2) return JNI_FALSE;
+    void* pixels = nullptr;
+    if (AndroidBitmap_lockPixels(env, bmp, &pixels) < 0) return JNI_FALSE;
+    uint8_t* base = (uint8_t*)pixels;
+
+    std::vector<float> small((size_t)sw * sh);
+    for (uint32_t sy = 0; sy < sh; sy++) {
+        uint32_t y0 = sy * 4, y1 = y0 + 4; if (y1 > h) y1 = h;
+        for (uint32_t sx = 0; sx < sw; sx++) {
+            uint32_t x0 = sx * 4, x1 = x0 + 4; if (x1 > w) x1 = w;
+            uint32_t sum = 0, cnt = 0;
+            for (uint32_t y = y0; y < y1; y++) {
+                uint8_t* row = base + (size_t)y * info.stride;
+                for (uint32_t x = x0; x < x1; x++) {
+                    uint8_t* p = row + (size_t)x * 4;
+                    sum += (77u * p[0] + 150u * p[1] + 29u * p[2]) >> 8;
+                    cnt++;
+                }
+            }
+            small[(size_t)sy * sw + sx] = cnt ? (float)sum / (float)cnt : 0.f;
+        }
+    }
+    const float kx = (float)sw / (float)w;
+    const float ky = (float)sh / (float)h;
+    const float amp = amount;
+    for (uint32_t y = 0; y < h; y++) {
+        uint8_t* row = base + (size_t)y * info.stride;
+        float fy = ((float)y + 0.5f) * ky - 0.5f;
+        if (fy < 0.f) fy = 0.f;
+        int iy = (int)fy;
+        if (iy > (int)sh - 2) iy = (int)sh - 2;
+        float tys = fy - (float)iy;
+        const float* r0 = &small[(size_t)iy * sw];
+        const float* r1 = &small[(size_t)(iy + 1) * sw];
+        for (uint32_t x = 0; x < w; x++) {
+            uint8_t* p = row + (size_t)x * 4;
+            float fx = ((float)x + 0.5f) * kx - 0.5f;
+            if (fx < 0.f) fx = 0.f;
+            int ix = (int)fx;
+            if (ix > (int)sw - 2) ix = (int)sw - 2;
+            float txs = fx - (float)ix;
+            float ll = (r0[ix] * (1.f - txs) + r0[ix + 1] * txs) * (1.f - tys)
+                     + (r1[ix] * (1.f - txs) + r1[ix + 1] * txs) * tys;
+            float l = 0.299f * p[0] + 0.587f * p[1] + 0.114f * p[2];
+            float diff = l - ll;
+            float ad = diff < 0.f ? -diff : diff;
+            float kk = ad > 24.f ? 0.30f : (ad > 12.f ? 0.55f : 1.f);
+            float d = diff * amp * kk;
+            if (d > 12.f) d = 12.f; else if (d < -12.f) d = -12.f;
+            int di = (int)d;
+            if (di != 0) {
+                int r = p[0] + di, g = p[1] + di, b = p[2] + di;
+                p[0] = (uint8_t)(r < 0 ? 0 : (r > 255 ? 255 : r));
+                p[1] = (uint8_t)(g < 0 ? 0 : (g > 255 ? 255 : g));
+                p[2] = (uint8_t)(b < 0 ? 0 : (b > 255 ? 255 : b));
+            }
+        }
+    }
+    AndroidBitmap_unlockPixels(env, bmp);
+    return JNI_TRUE;
+}
+
+// ===========================================================================
+// Перенос настоящих микродеталей с полного разрешения опорного кадра на
+// финал серии (после апскейла work→full). Ночь/HDR считаются на 2048–2304,
+// затем Lanczos растягивает до 4000×3000 — реальных деталей выше 2048 нет.
+// Здесь high-pass опорного 12 Мп кадра (band ~1–5 px) добавляется в финал:
+//   * amplitude gate (thr) → зерно одиночного кадра НЕ возвращается;
+//   * sign agreement с деталью финала → гостинг/движение отбрасываются;
+//   * luma-only (δ в R,G,B одинаково) → цветовой шум стека не трогаем;
+//   * кап ±14 уровней → без грубых ореолов.
+// Сэмплирование high-pass билинейное по (sx,sy): кроп алайна может дать
+// масштаб, чуть отличный от 1.0 — соответствие пиксельных сеток сохраняется.
+// Память: полосы по 96 строк, ~3 МБ временных буферов, без 48 МБ копий.
+// ===========================================================================
+static inline int thmcLum601(const uint8_t* p) {
+    return (77 * p[0] + 150 * p[1] + 29 * p[2]) >> 8;
+}
+
+static inline float thmcSmooth(float t) {
+    if (t <= 0.f) return 0.f;
+    if (t >= 1.f) return 1.f;
+    return t * t * (3.f - 2.f * t);
+}
+
+/** box-blur по горизонтали (r=2), скользящая сумма, края clamp. */
+static void thmcBlurH(const uint8_t* src, uint8_t* dst, int w, int rows, int r) {
+    const int div = 2 * r + 1;
+    for (int j = 0; j < rows; j++) {
+        const uint8_t* s = src + (size_t)j * w;
+        uint8_t* d = dst + (size_t)j * w;
+        int sum = 0;
+        for (int x = -r; x <= r; x++) {
+            int cx = x < 0 ? 0 : (x >= w ? w - 1 : x);
+            sum += s[cx];
+        }
+        for (int x = 0; x < w; x++) {
+            d[x] = (uint8_t)(sum / div);
+            int xo = x - r; if (xo < 0) xo = 0;
+            int xi = x + r + 1; if (xi >= w) xi = w - 1;
+            sum += s[xi] - s[xo];
+        }
+    }
+}
+
+/** box-blur по вертикали (r=2) внутри полосы, края clamp. Бегущая сумма по столбцам. */
+static void thmcBlurV(const uint8_t* src, uint8_t* dst, int w, int rows, int r,
+                      std::vector<int>& acc) {
+    const int div = 2 * r + 1;
+    if ((int)acc.size() < w) acc.resize(w);
+    for (int x = 0; x < w; x++) acc[x] = 0;
+    for (int jj = -r; jj <= r; jj++) {
+        int j = jj < 0 ? 0 : (jj > rows - 1 ? rows - 1 : jj);
+        const uint8_t* s = src + (size_t)j * w;
+        for (int x = 0; x < w; x++) acc[x] += s[x];
+    }
+    for (int j = 0; j < rows; j++) {
+        uint8_t* d = dst + (size_t)j * w;
+        for (int x = 0; x < w; x++) d[x] = (uint8_t)(acc[x] / div);
+        int jo = j - r; if (jo < 0) jo = 0;
+        int ji = j + r + 1; if (ji > rows - 1) ji = rows - 1;
+        const uint8_t* so = src + (size_t)jo * w;
+        const uint8_t* si = src + (size_t)ji * w;
+        for (int x = 0; x < w; x++) acc[x] += si[x] - so[x];
+    }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_example_thundercam20_imageprocessing_NativeProcessor_detailTransferBitmap(
+        JNIEnv* env, jobject /* this */,
+        jobject baseBmp, jobject dstBmp,
+        jfloat scaleX, jfloat scaleY, jfloat offX, jfloat offY,
+        jfloat amount, jfloat thr) {
+    if (amount <= 0.001f) return JNI_TRUE;
+    AndroidBitmapInfo iB, iD;
+    if (AndroidBitmap_getInfo(env, baseBmp, &iB) < 0) return JNI_FALSE;
+    if (AndroidBitmap_getInfo(env, dstBmp, &iD) < 0) return JNI_FALSE;
+    if (iB.format != ANDROID_BITMAP_FORMAT_RGBA_8888 ||
+        iD.format != ANDROID_BITMAP_FORMAT_RGBA_8888) return JNI_FALSE;
+    const int bw = (int)iB.width, bh = (int)iB.height;
+    const int dw = (int)iD.width, dh = (int)iD.height;
+    if (bw < 8 || bh < 8 || dw < 8 || dh < 8) return JNI_FALSE;
+
+    uint8_t *pB = nullptr, *pD = nullptr;
+    if (AndroidBitmap_lockPixels(env, baseBmp, (void**)&pB) < 0) return JNI_FALSE;
+    if (AndroidBitmap_lockPixels(env, dstBmp, (void**)&pD) < 0) {
+        AndroidBitmap_unlockPixels(env, baseBmp);
+        return JNI_FALSE;
+    }
+
+    const int R = 2;
+    const int STRIP = 96;
+    const float sx = scaleX > 1e-4f ? scaleX : 1.f;
+    const float sy = scaleY > 1e-4f ? scaleY : 1.f;
+    const float tLo = thr > 0.5f ? thr : 0.5f;
+    const float tHi = tLo * 1.6f + 1.f;
+    const float maxDelta = 14.f;
+
+    const int maxRowsB = (int)ceilf((float)STRIP * sy) + 2 * R + 5;
+    const int maxRowsD = STRIP + 2 * R + 3;
+    std::vector<uint8_t> bLum((size_t)maxRowsB * bw), bH((size_t)maxRowsB * bw), bV((size_t)maxRowsB * bw);
+    std::vector<uint8_t> dLum((size_t)maxRowsD * dw), dH((size_t)maxRowsD * dw), dV((size_t)maxRowsD * dw);
+    std::vector<int> accB, accD;
+
+    for (int y0 = 0; y0 < dh; y0 += STRIP) {
+        int y1 = y0 + STRIP; if (y1 > dh) y1 = dh;
+        int dy0 = y0 - R; if (dy0 < 0) dy0 = 0;
+        int dy1 = y1 + R; if (dy1 > dh) dy1 = dh;
+        const int drows = dy1 - dy0;
+        for (int j = 0; j < drows; j++) {
+            const uint8_t* row = pD + (size_t)(dy0 + j) * iD.stride;
+            uint8_t* out = dLum.data() + (size_t)j * dw;
+            for (int x = 0; x < dw; x++) out[x] = (uint8_t)thmcLum601(row + (size_t)x * 4);
+        }
+        thmcBlurH(dLum.data(), dH.data(), dw, drows, R);
+        thmcBlurV(dH.data(), dV.data(), dw, drows, R, accD);
+
+        int byA = (int)floorf(offY + (float)y0 * sy) - R - 1;
+        int byB = (int)ceilf(offY + (float)(y1 - 1) * sy) + R + 2;
+        if (byA < 0) byA = 0;
+        if (byB > bh - 1) byB = bh - 1;
+        const int brows = byB - byA + 1;
+        if (brows < 1) continue;
+        for (int j = 0; j < brows; j++) {
+            const uint8_t* row = pB + (size_t)(byA + j) * iB.stride;
+            uint8_t* out = bLum.data() + (size_t)j * bw;
+            for (int x = 0; x < bw; x++) out[x] = (uint8_t)thmcLum601(row + (size_t)x * 4);
+        }
+        thmcBlurH(bLum.data(), bH.data(), bw, brows, R);
+        thmcBlurV(bH.data(), bV.data(), bw, brows, R, accB);
+
+        for (int y = y0; y < y1; y++) {
+            uint8_t* row = pD + (size_t)y * iD.stride;
+            const uint8_t* dl = dLum.data() + (size_t)(y - dy0) * dw;
+            const uint8_t* dv = dV.data() + (size_t)(y - dy0) * dw;
+            float byF = offY + (float)y * sy;
+            int iy0 = (int)floorf(byF);
+            float fy = byF - (float)iy0;
+            int ry0 = iy0 - byA;
+            int ry1 = ry0 + 1;
+            if (ry0 < 0) { ry0 = 0; ry1 = 0; fy = 0.f; }
+            if (ry1 > brows - 1) { ry1 = brows - 1; if (ry0 > ry1) ry0 = ry1; }
+            const uint8_t* bl0 = bLum.data() + (size_t)ry0 * bw;
+            const uint8_t* bl1 = bLum.data() + (size_t)ry1 * bw;
+            const uint8_t* bv0 = bV.data() + (size_t)ry0 * bw;
+            const uint8_t* bv1 = bV.data() + (size_t)ry1 * bw;
+            for (int x = 0; x < dw; x++) {
+                uint8_t* p = row + (size_t)x * 4;
+                const float yl = (float)dl[x];
+                if (yl < 12.f || yl > 248.f) continue;
+                float bxF = offX + (float)x * sx;
+                int ix0 = (int)bxF;
+                float fx = bxF - (float)ix0;
+                int ix1 = ix0 + 1;
+                if (ix0 < 0) { ix0 = 0; ix1 = 0; fx = 0.f; }
+                if (ix1 > bw - 1) { ix1 = bw - 1; if (ix0 > ix1) ix0 = ix1; }
+                float lF = ((float)bl0[ix0] * (1.f - fx) + (float)bl0[ix1] * fx) * (1.f - fy)
+                         + ((float)bl1[ix0] * (1.f - fx) + (float)bl1[ix1] * fx) * fy;
+                float vF = ((float)bv0[ix0] * (1.f - fx) + (float)bv0[ix1] * fx) * (1.f - fy)
+                         + ((float)bv1[ix0] * (1.f - fx) + (float)bv1[ix1] * fx) * fy;
+                float dF = lF - vF;
+                float aF = dF < 0.f ? -dF : dF;
+                if (aF < 0.01f) continue;
+                float ampW = thmcSmooth((aF - tLo) / (tHi - tLo));
+                if (ampW <= 0.001f) continue;
+                float dW = yl - (float)dv[x];
+                float aW = dW < 0.f ? -dW : dW;
+                // Добавляем только НЕДОСТАЮЩУЮ деталь: если финал уже несёт
+                // деталь не меньше опоры (после Lanczos/шарпа) — не дублируем
+                // и не плодим двойные контуры. 0.85 — поправка на тон-кривую.
+                float need = aF - aW * 0.85f;
+                if (need <= 0.f) continue;
+                if (need > aF) need = aF;
+                float agree = (dF * dW >= 0.f) ? 1.f : (aW < 1.5f ? 0.55f : 0.05f);
+                float delta = (dF > 0.f ? need : -need) * ampW * agree * amount;
+                if (delta > maxDelta) delta = maxDelta; else if (delta < -maxDelta) delta = -maxDelta;
+                int di = (int)delta;
+                if (di == 0) continue;
+                int r = p[0] + di, g = p[1] + di, b = p[2] + di;
+                p[0] = (uint8_t)(r < 0 ? 0 : (r > 255 ? 255 : r));
+                p[1] = (uint8_t)(g < 0 ? 0 : (g > 255 ? 255 : g));
+                p[2] = (uint8_t)(b < 0 ? 0 : (b > 255 ? 255 : b));
+            }
+        }
+    }
+
+    AndroidBitmap_unlockPixels(env, dstBmp);
+    AndroidBitmap_unlockPixels(env, baseBmp);
+    return JNI_TRUE;
 }

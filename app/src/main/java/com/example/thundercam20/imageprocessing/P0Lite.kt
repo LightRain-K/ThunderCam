@@ -130,11 +130,16 @@ object P0Lite {
     }
 
     /**
-     * Локальный контраст (структура): low-freq (×1/4) вверх/низко по люме, ±24.
-     * Публичный — legacy-путь ImageProcessor добирает «pop» чистых дневных
-     * кадров этим же инструментом (было: только в Lite, «нет отличия от стока»).
+     * Локальный контраст (структура): low-freq (×1/4) вверх/низко по люме, ±12,
+     * halo-guard на кромках. Публичный — legacy-путь ImageProcessor добирает «pop»
+     * чистых дневных кадров этим же инструментом.
+     *
+     * Натив первым: на 12 Мп Kotlin-цикл стоил 150–250 мс и 2 полных IntArray;
+     * C++-проход — один проход по пикселям (~20–30 мс) и ~1 МБ на low-freq.
+     * Любая проблема → старый Kotlin-путь (поведение байт-в-байт то же).
      */
     fun localContrast(bmp: Bitmap, amount: Float) {
+        if (NativeProcessor.localContrast(bmp, amount)) return
         val w = bmp.width; val h = bmp.height
         val sw = (w / 4).coerceAtLeast(1); val sh = (h / 4).coerceAtLeast(1)
         val low = Bitmap.createScaledBitmap(bmp, sw, sh, true)
@@ -154,7 +159,17 @@ object P0Lite {
                 val lr = (q shr 16) and 255; val lg = (q shr 8) and 255; val lb = q and 255
                 val l = 0.299f * r + 0.587f * g + 0.114f * b
                 val ll = 0.299f * lr + 0.587f * lg + 0.114f * lb
-                val d = ((l - ll) * amount).toInt().coerceIn(-24, 24)
+                // Halo-guard: на сильных переходах (контур объекта в фокусе)
+                // локальный контраст раньше давал серую кайму ±24. Душим
+                // вклад у самих кромок и режем амплитуду до ±12.
+                val diff = l - ll
+                val ad = if (diff < 0f) -diff else diff
+                val k = when {
+                    ad > 24f -> 0.30f
+                    ad > 12f -> 0.55f
+                    else -> 1f
+                }
+                val d = (diff * amount * k).toInt().coerceIn(-12, 12)
                 srcPx[i] = -0x1000000 or
                     ((r + d).coerceIn(0, 255) shl 16) or
                     ((g + d).coerceIn(0, 255) shl 8) or

@@ -310,7 +310,7 @@ object DenoiseV2 {
                 Core.multiply(t, Scalar(1.0 / 0.5), t); t
             }
         )
-        Core.multiply(eT, Scalar(if (clean) 0.6 else 0.8), eT)
+        Core.multiply(eT, Scalar(if (clean) 0.75 else 0.85), eT)
         val eTB = Mat(); Imgproc.blur(eT, eTB, Size(3.0, 3.0)); eT.release()
         eT = eTB
         // в глубокой тени честной хроме делать нечего
@@ -321,32 +321,67 @@ object DenoiseV2 {
         Core.multiply(eT, oneMd, eT); oneMd.release()
         val washCrF = Mat(); washCr.convertTo(washCrF, CvType.CV_32FC1); washCr.release()
         val washCbF = Mat(); washCb.convertTo(washCbF, CvType.CV_32FC1); washCb.release()
-        // cr_o = wash + (orig - wash) * e_t
+        // cr_o = wash + (orig - wash) * k
+        // k = max(edge-маска, маска РЕАЛЬНОГО цвета). Вторая критична: розовая
+        // подсветка на белых ветках даёт большую разницу Cr/Cb — это заливка,
+        // а не шум. Раньше возврат шёл только по яркостным кромкам (веточки
+        // тонкие — маска их не видит), и цвет «серел». Теперь |orig-wash| > 6
+        // сохраняет оригинальный цвет, полная сохранность к 18 уровням;
+        // мытьё остаётся только для мелких колебаний (собственно шум).
         fun chromaReturn(wash: Mat, orig: Mat): Mat {
             val d = Mat(); Core.subtract(orig, wash, d)
-            val t = Mat(); Core.multiply(d, eT, t); d.release()
-            val r = Mat(); Core.add(wash, t, t); t.release()
+            val ad = Mat(); Core.absdiff(orig, wash, ad)
+            Core.subtract(ad, Scalar(6.0), ad)
+            Core.multiply(ad, Scalar(1.0 / 12.0), ad)
+            Core.max(ad, Scalar(0.0), ad)
+            Core.min(ad, Scalar(1.0), ad)
+            val k = Mat(); Core.max(eT, ad, k); ad.release()
+            val t = Mat(); Core.multiply(d, k, t); d.release(); k.release()
+            val r = Mat(); Core.add(wash, t, r); t.release()
             return r
         }
         val crO = chromaReturn(washCrF, crOF); washCrF.release(); crOF.release()
         val cbO = chromaReturn(washCbF, cbOF); washCbF.release(); cbOF.release()
         eT.release()
         edge.release()
-        // в самом дне цвета нет — тянем к серому вместо пятен
+        // в самом дне цвета нет — тянем к серому вместо пятен.
+        // НО: тёмно-синяя хвоя, неон, гирлянды, вечернее небо — это НАСТОЯЩИЙ
+        // цвет, а не хроматический шум. Раньше pullGray в тенях гасил цвет до
+        // серого на 50–65% и насыщенные тёмные объекты становились грязно-серыми.
+        // Теперь: сила вытяжки умножается на (1 − 0.9·saturated), где saturated —
+        // smoothstep по |Cr−128|+|Cb−128|: амплитуда шума 2–8 → тянем как раньше,
+        // устойчивая заливка 18+ → сохраняем 90% цвета.
         val gpBase = sstepInv(yFlat8, 45.0, 25.0)
         val grayPull = Mat(); Imgproc.blur(gpBase, grayPull, Size(7.0, 7.0)); gpBase.release()
         val gp = if (clean) 0.65 else 0.5
+        val grayW = Mat()
+        run {
+            val a1 = Mat(); Core.absdiff(crO, Scalar(128.0), a1)
+            val a2 = Mat(); Core.absdiff(cbO, Scalar(128.0), a2)
+            val amp = Mat(); Core.add(a1, a2, amp); a1.release(); a2.release()
+            val ampB = Mat(); Imgproc.blur(amp, ampB, Size(5.0, 5.0)); amp.release()
+            Core.subtract(ampB, Scalar(16.0), ampB)
+            Core.multiply(ampB, Scalar(1.0 / 26.0), ampB)
+            val satKeep = DenoiseCommon.matSmoothstep(ampB); ampB.release()
+            // factor = 1 − 0.9·satKeep
+            Core.multiply(satKeep, Scalar(0.9), satKeep)
+            val one = Mat(satKeep.size(), satKeep.type(), Scalar(1.0))
+            val factor = Mat(); Core.subtract(one, satKeep, factor)
+            one.release(); satKeep.release()
+            Core.multiply(grayPull, factor, grayW)
+            Core.multiply(grayW, Scalar(gp), grayW)
+            factor.release()
+        }
+        grayPull.release()
         fun pullGray(c: Mat): Mat {
             val d = Mat(); Core.subtract(c, Scalar(128.0), d)
-            val k = Mat(); Core.multiply(grayPull, Scalar(gp), k)
-            val t = Mat(); Core.multiply(d, k, t)
-            d.release(); k.release()
+            val t = Mat(); Core.multiply(d, grayW, t); d.release()
             val r = Mat(); Core.subtract(c, t, t); t.release()
             return r
         }
         val crP = pullGray(crO); crO.release()
         val cbP = pullGray(cbO); cbO.release()
-        grayPull.release()
+        grayW.release()
         val crO8 = Mat(); crP.convertTo(crO8, CvType.CV_8UC1); crP.release()
         val cbO8 = Mat(); cbP.convertTo(cbO8, CvType.CV_8UC1); cbP.release()
         return Denoised(yFlat8, crO8, cbO8, sigmaMed, sigmaDark)

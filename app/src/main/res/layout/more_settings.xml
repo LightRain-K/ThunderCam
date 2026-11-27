@@ -256,6 +256,247 @@
                     android:textSize="12sp"
                     android:textAllCaps="true" />
 
+                <!-- Сводка «что сейчас включено» простым языком. Обновляется кодом. -->
+                <TextView
+                    android:id="@+id/thmc_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="26dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="26dp"
+                    android:paddingBottom="6dp"
+                    android:textColor="?android:textColorSecondary"
+                    android:textSize="13sp"
+                    tools:text="Сейчас: стиль «Стандарт» · ночь авто · без HDR · авто-сюжет" />
+
+                <!-- Профиль качества: один тап задаёт силу обработки/шумодав/апскейл. -->
+                <LinearLayout
+                    android:id="@+id/thmc_profile_setting"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/thmc_profile_icon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:importantForAccessibility="no"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp"
+                        android:src="@drawable/image_quality" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/thmc_profile_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:paddingBottom="2dp"
+                            android:text="@string/thmc_profile_title"
+                            android:textColor="?android:textColorPrimary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/thmc_profile_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="10dp"
+                            android:text="@string/thmc_profile_title"
+                            android:textSize="14sp"
+                            tools:ignore="RtlSymmetry" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Умная обработка: ОДИН мастер-выключатель вместо четырёх. -->
+                <LinearLayout
+                    android:id="@+id/thmc_smart_setting"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/thmc_smart_icon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:importantForAccessibility="no"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp"
+                        android:src="@drawable/auto" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/thmc_smart_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:paddingBottom="2dp"
+                            android:text="@string/thmc_smart_title"
+                            android:textColor="?android:textColorPrimary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/thmc_smart_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="10dp"
+                            android:text="@string/thmc_smart_desc"
+                            android:textSize="14sp"
+                            tools:ignore="RtlSymmetry" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/thmc_smart_toggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="0dp"
+                        android:contentDescription="@string/thmc_smart_title" />
+
+                </LinearLayout>
+
+                <!-- Все настройки: раскрывает ползунки и технические опции. -->
+                <LinearLayout
+                    android:id="@+id/thmc_expert_setting"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/thmc_expert_icon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:importantForAccessibility="no"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp"
+                        android:src="@drawable/settings_icon" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/thmc_expert_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:paddingBottom="2dp"
+                            android:text="@string/thmc_expert_title"
+                            android:textColor="?android:textColorPrimary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/thmc_expert_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="10dp"
+                            android:text="@string/thmc_expert_desc"
+                            android:textSize="14sp"
+                            tools:ignore="RtlSymmetry" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/thmc_expert_toggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="0dp"
+                        android:contentDescription="@string/thmc_expert_title" />
+
+                </LinearLayout>
+
+                <!-- Справка простым языком: что делает каждый пункт. -->
+                <LinearLayout
+                    android:id="@+id/thmc_help_setting"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:id="@+id/thmc_help_icon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:importantForAccessibility="no"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp"
+                        android:src="@drawable/info" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/thmc_help_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:paddingBottom="2dp"
+                            android:text="@string/thmc_help_row_title"
+                            android:textColor="?android:textColorPrimary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/thmc_help_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="10dp"
+                            android:text="@string/thmc_help_row_desc"
+                            android:textSize="14sp"
+                            tools:ignore="RtlSymmetry" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
                 <!-- ThunderCam пресет: один тап вместо шести слайдеров (исследование: еда/портрет/ночь/документ/пейзаж). -->
                 <LinearLayout
                     android:id="@+id/thmc_preset_setting"
@@ -833,6 +1074,7 @@
                 <!-- ThunderCam ночь-авто: тёмная сцена сама снимает серией. Выкл = ночью одиночный. -->
                 <!-- Подзаголовок секции: серии в одном месте, а не россыпью. -->
                 <TextView
+                    android:id="@+id/thmc_sub_series_header"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
@@ -1284,6 +1526,7 @@
 
                 <!-- ThunderCam зум: цифра поверх оптики до 20× + SR-апскейл. Выкл = предел HAL. -->
                 <TextView
+                    android:id="@+id/thmc_sub_zoom_header"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
