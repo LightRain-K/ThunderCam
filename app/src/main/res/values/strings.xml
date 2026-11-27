@@ -434,4 +434,7 @@
     <string name="thmc_badge_on">Enhancement</string>
     <string name="thmc_badge_off">Enhancement off</string>
     <string name="thmc_series_cancel_hint">tap to cancel</string>
+    <string name="thmc_zoom_stab_title">Zoom stabilization</string>
+    <string name="thmc_zoom_stab_desc">On zoom it takes 3 quick frames and keeps the sharpest — less shake blur. Slightly slower.</string>
+    <string name="thmc_enhance_model_label">Model: %1$s</string>
 </resources>

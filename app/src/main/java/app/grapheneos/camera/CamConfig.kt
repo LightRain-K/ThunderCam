@@ -672,6 +672,11 @@ class CamConfig(private val mActivity: MainActivity) {
         get() = thmc.expertUi
         set(value) { thmc.expertUi = value }
 
+    // Программная стабилизация на зуме: 3 кадра → самый резкий.
+    var thmcZoomStab: Boolean
+        get() = thmc.zoomStab
+        set(value) { thmc.zoomStab = value }
+
     // Авто-EV: перед одиночным кадром давим пересвет HAL отрицательным bias
     // (только вниз, поверх ручной компенсации, с возвратом). Иначе при среднем
     // свете HAL ставит ISO ~4000 и выбеливает кадр — P0 это уже не чинит.

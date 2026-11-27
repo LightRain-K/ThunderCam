@@ -69,6 +69,7 @@ class ThmcEnhanceActivity : AppCompatActivity() {
     private lateinit var proBtn: Button
     private lateinit var proStatus: TextView
     private lateinit var proProgress: ProgressBar
+    private lateinit var proModel: TextView
     private lateinit var saveRow: LinearLayout
 
     private var targetUri: Uri? = null
@@ -133,6 +134,14 @@ class ThmcEnhanceActivity : AppCompatActivity() {
         proBtn = findViewById(R.id.pro_btn)
         proStatus = findViewById(R.id.pro_status)
         proProgress = findViewById(R.id.pro_progress)
+        proModel = findViewById(R.id.pro_model)
+        proModel.setOnClickListener {
+            try {
+                app.grapheneos.camera.thmc.showSrModelDialog(this, thmcSettings())
+                proModel.postDelayed({ refreshProModelLabel() }, 400)
+            } catch (_: Throwable) {}
+        }
+        refreshProModelLabel()
         aiStrengthBar.value = aiStrength.toFloat()
         aiStrengthValue.text = "$aiStrength%"
         strengthBar.value = curStrength.toFloat()
@@ -345,6 +354,32 @@ class ThmcEnhanceActivity : AppCompatActivity() {
         } catch (_: Throwable) {}
     }
 
+    private fun thmcSettings(): app.grapheneos.camera.thmc.ThmcSettings =
+        app.grapheneos.camera.thmc.ThmcSettings(
+            app.grapheneos.camera.thmc.SharedPrefsStore(
+                getSharedPreferences("commons", Context.MODE_PRIVATE)
+            )
+        )
+
+    /** Подпись выбранной модели Pro: та же, что в настройках SR-модели. */
+    private fun refreshProModelLabel() {
+        try {
+            val s = thmcSettings()
+            val sel = s.srModel
+            val ru = java.util.Locale.getDefault().language == "ru"
+            val e = app.grapheneos.camera.thmc.ThmcSrModels.catalog().firstOrNull { it.id == sel }
+            val title = if (e == null) {
+                if (ru) "Авто" else "Auto"
+            } else {
+                if (ru) e.titleRu else e.titleEn
+            }
+            val missing = e != null && app.grapheneos.camera.thmc.ThmcSrModels.isDownloadedId(e.id) &&
+                !app.grapheneos.camera.thmc.ThmcSrModels.isDownloaded(this, e.id) && e.url.isNotBlank()
+            val suffix = if (missing) (if (ru) " · не загружена" else " · not downloaded") else ""
+            proModel.text = getString(R.string.thmc_enhance_model_label, title + suffix)
+        } catch (_: Throwable) {}
+    }
+
     private fun showWork(work: Boolean) {
         progressBox.visibility = if (work) View.VISIBLE else View.GONE
         previewView.visibility = if (work) View.GONE else View.VISIBLE
@@ -353,6 +388,7 @@ class ThmcEnhanceActivity : AppCompatActivity() {
         toolStrip.visibility = if (work) View.GONE else View.VISIBLE
         overwriteRow.visibility = if (work) View.GONE else View.VISIBLE
         saveRow.visibility = if (work) View.GONE else View.VISIBLE
+        proModel.visibility = if (work) View.GONE else View.VISIBLE
         saveBtn.isEnabled = !work
         proBtn.isEnabled = !work
         if (!work) {

@@ -345,6 +345,16 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         thmcAutoSceneSetting.setOnClickListener {
             thmcAutoSceneToggle.performClick()
         }
+
+        // Стабилизация на зуме: 3 быстрых кадра → самый резкий.
+        val thmcZoomStabToggle = binding.thmcZoomStabToggle
+        thmcZoomStabToggle.isChecked = camConfig.thmcZoomStab
+        thmcZoomStabToggle.setOnClickListener {
+            camConfig.thmcZoomStab = thmcZoomStabToggle.isChecked
+        }
+        binding.thmcZoomStabSetting.setOnClickListener {
+            thmcZoomStabToggle.performClick()
+        }
         // Глобальная доводка текстуры: твой алгоритм, отдельная стадия после шумодава.
         val thmcGlobalRefineSetting = binding.thmcGlobalRefineSetting
         val thmcGlobalRefineToggle = binding.thmcGlobalRefineToggle
@@ -833,13 +843,14 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
             val on = camConfig.thmcThunder
             val rows = listOf(
                 binding.thmcNightSetting, binding.thmcHdrSetting, binding.thmcAutoSceneSetting,
-                binding.thmcPresetSetting, binding.thmcP0Setting,
+                binding.thmcPresetSetting, binding.thmcP0Setting, binding.thmcZoomStabSetting,
             )
             for (r in rows) { r.alpha = if (on) 1f else 0.4f; r.isEnabled = on }
             binding.thmcNightSettingToggle.isEnabled = on
             binding.thmcHdrSettingToggle.isEnabled = on
             binding.thmcAutoSceneToggle.isEnabled = on
             binding.thmcP0SettingToggle.isEnabled = on
+            binding.thmcZoomStabToggle.isEnabled = on
             binding.thmcDenoiseSlider.isEnabled = on
             binding.thmcDenoiseSlider.alpha = if (on) 1f else 0.4f
         } catch (_: Throwable) {}

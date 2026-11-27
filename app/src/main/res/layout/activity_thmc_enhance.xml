@@ -2,6 +2,7 @@
 <!-- ThunderCam Enhance: структура экрана в XML (было кодом в onCreate).
      Логика и слайдеры — в ThmcEnhanceActivity, здесь только раскладка. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000"
@@ -210,6 +211,22 @@
             android:layout_weight="1" />
 
     </LinearLayout>
+
+    <!-- Выбор модели Pro: тот же каталог, что в настройках (вшитые/скачиваемые). -->
+    <TextView
+        android:id="@+id/pro_model"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:paddingTop="6dp"
+        android:paddingBottom="2dp"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="Модель: Вшитая Pro" />
 
     <LinearLayout
         android:id="@+id/save_row"

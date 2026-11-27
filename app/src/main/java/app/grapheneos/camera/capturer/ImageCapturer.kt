@@ -192,6 +192,22 @@ class ImageCapturer(val mActivity: MainActivity) {
                 } catch (_: Throwable) {}
             }
         }
+        // Зум-стабилизация: на цифровом зуме смаз от дрожи множится вместе с
+        // кропом, а серии на большом зуме запрещены (сдвиг > окна равнялки).
+        // Снимаем 3 быстрых кадра и оставляем самый резкий — «lucky imaging».
+        val zoomStabWanted = camConfig.thmcZoomStab && !hdrBypass &&
+            !camConfig.isVideoMode && !camConfig.isQRMode &&
+            camConfig.flashMode == ImageCapture.FLASH_MODE_OFF &&
+            totalZoom >= 1.9f &&
+            !app.grapheneos.camera.thmc.ThmcNight.isRunning() &&
+            !app.grapheneos.camera.thmc.ThmcHdr.isRunning()
+        if (zoomStabWanted) {
+            if (app.grapheneos.camera.thmc.ThmcZoom.capture(this, totalZoom)) {
+                onShotDispatched()
+                return
+            }
+        }
+
         // HDR включён, но вспышка его молча отключала — говорим прямо.
         if (!hdrBypass && camConfig.thmcHdr && !camConfig.isVideoMode && !camConfig.isQRMode &&
             camConfig.flashMode != ImageCapture.FLASH_MODE_OFF
@@ -371,6 +387,7 @@ class ImageCapturer(val mActivity: MainActivity) {
         queuedTap = false
         try { app.grapheneos.camera.thmc.ThmcHdr.cancel() } catch (_: Throwable) {}
         try { app.grapheneos.camera.thmc.ThmcNight.cancel() } catch (_: Throwable) {}
+        try { app.grapheneos.camera.thmc.ThmcZoom.cancel() } catch (_: Throwable) {}
         if (isTakingPicture) {
             val copy: List<ImageSaver>
             synchronized(activeSavers) {
