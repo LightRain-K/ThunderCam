@@ -32,6 +32,9 @@ object ThmcGyro {
     @Volatile private var magnitudeDegPerSec = 0f
     @Volatile private var eventsSeen = 0
     @Volatile private var listening = false
+    // Последние подписанные угловые скорости (рад/с), оси датчика: x — pitch, y — yaw.
+    @Volatile private var lastWx = 0f
+    @Volatile private var lastWy = 0f
 
     // Кольцевой буфер угловой скорости (tNs, wx, wz опущен, wy): для приора сдвига V1.5.
     // SensorEvent.timestamp — та же шкала, что SystemClock.elapsedRealtimeNanos().
@@ -48,6 +51,8 @@ object ThmcGyro {
                 ).toFloat() * 57.2958f
                 // Сглаживание: сырой MEMS шумит, резкие рывки всё равно пробьют.
                 magnitudeDegPerSec = magnitudeDegPerSec * 0.6f + m * 0.4f
+                lastWx = e.values[0]
+                lastWy = e.values[1]
                 eventsSeen++
                 synchronized(buf) {
                     buf.addLast(Triple(e.timestamp, e.values[0], e.values[1]))
@@ -127,6 +132,9 @@ object ThmcGyro {
         if (magRad.isNaN()) return 0f
         return (magRad * focalPx).toFloat().coerceAtLeast(0f)
     }
+
+    /** Последние подписанные угловые скорости (rad/s): x — pitch, y — yaw. */
+    fun latestRates(): Pair<Float, Float> = lastWx to lastWy
 
     /**
      * Подписанный поворот между моментами: (yaw, pitch) в радианах, как их видит

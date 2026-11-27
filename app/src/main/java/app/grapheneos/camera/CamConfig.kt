@@ -677,6 +677,11 @@ class CamConfig(private val mActivity: MainActivity) {
         get() = thmc.zoomStab
         set(value) { thmc.zoomStab = value }
 
+    // Стабилизация превью сдвигом окна кропа (EIS, эксперимент).
+    var thmcPreviewStab: Boolean
+        get() = thmc.previewStab
+        set(value) { thmc.previewStab = value }
+
     // Авто-EV: перед одиночным кадром давим пересвет HAL отрицательным bias
     // (только вниз, поверх ручной компенсации, с возвратом). Иначе при среднем
     // свете HAL ставит ISO ~4000 и выбеливает кадр — P0 это уже не чинит.

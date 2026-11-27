@@ -414,5 +414,7 @@
     <string name="thmc_series_cancel_hint">тап — отменить</string>
     <string name="thmc_zoom_stab_title">Стабилизация на зуме</string>
     <string name="thmc_zoom_stab_desc">На зуме снимает 3 быстрых кадра и оставляет самый резкий — меньше смаза от дрожи. Чуть медленнее.</string>
+    <string name="thmc_preview_stab_title">Стабилизация превью (эксперимент)</string>
+    <string name="thmc_preview_stab_desc">Превью следит за гироскопом: двигается окно кропа, а не трясётся картинка. Захват не меняется; превью показывает на ~10% уже.</string>
     <string name="thmc_enhance_model_label">Модель: %1$s</string>
 </resources>

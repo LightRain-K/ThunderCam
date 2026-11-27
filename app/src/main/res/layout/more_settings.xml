@@ -1327,6 +1327,66 @@
 
                 </LinearLayout>
 
+                <!-- Стабилизация превью: сдвиг окна кропа по гироскопу (EIS). -->
+                <LinearLayout
+                    android:id="@+id/thmc_preview_stab_setting"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:orientation="horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/thmc_preview_stab_icon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:importantForAccessibility="no"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="8dp"
+                        android:src="@drawable/grid_3x3" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/thmc_preview_stab_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:paddingBottom="2dp"
+                            android:text="@string/thmc_preview_stab_title"
+                            android:textColor="?android:textColorPrimary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/thmc_preview_stab_subtitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="10dp"
+                            android:text="@string/thmc_preview_stab_desc"
+                            android:textSize="14sp"
+                            tools:ignore="RtlSymmetry" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/thmc_preview_stab_toggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:contentDescription="@string/thmc_preview_stab_title" />
+
+                </LinearLayout>
+
                 <!-- Продвинутые: тонкая настройка движка. Скрыты, чтобы не пугать. -->
                 <TextView
                     android:id="@+id/thmc_advanced_header"

@@ -436,5 +436,7 @@
     <string name="thmc_series_cancel_hint">tap to cancel</string>
     <string name="thmc_zoom_stab_title">Zoom stabilization</string>
     <string name="thmc_zoom_stab_desc">On zoom it takes 3 quick frames and keeps the sharpest — less shake blur. Slightly slower.</string>
+    <string name="thmc_preview_stab_title">Stabilized preview (experimental)</string>
+    <string name="thmc_preview_stab_desc">Preview follows the gyroscope: the crop window moves instead of the picture shaking. Photo capture is unchanged; the preview shows ~10% narrower.</string>
     <string name="thmc_enhance_model_label">Model: %1$s</string>
 </resources>

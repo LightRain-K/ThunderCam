@@ -793,6 +793,7 @@ open class MainActivity : AppCompatActivity(),
         updateThumbnail()
 
         refreshThmcModeBadge()
+        applyThmcPreviewStab()
 
         // Онбординг первого запуска: одно короткое объяснение, что камера делает сама.
         // Показываем только после выданного разрешения (не поверх системного диалога)
@@ -898,6 +899,13 @@ open class MainActivity : AppCompatActivity(),
         } else {
             imageCapturer.cancelPendingCaptureRequest()
         }
+        try { app.grapheneos.camera.thmc.ThmcPreviewStab.stop() } catch (_: Throwable) {}
+        try {
+            if (!app.grapheneos.camera.thmc.ThmcNight.isRunning() &&
+                !app.grapheneos.camera.thmc.ThmcHdr.isRunning() &&
+                !app.grapheneos.camera.thmc.ThmcZoom.isRunning()
+            ) app.grapheneos.camera.thmc.ThmcGyro.stop()
+        } catch (_: Throwable) {}
         if (camConfig.requireLocation) {
             application.dropLocationUpdates()
         }
@@ -2306,6 +2314,29 @@ open class MainActivity : AppCompatActivity(),
      * тумблеры меняются только в настройках, превью-яркость тут не нужна.
      */
     /** Живой бейдж режима (см. refresh в onResume + после каждого сохранения). */
+    /**
+     * Стабилизация превью движением окна кропа (EIS). Только картинка превью:
+     * сдвигаем PreviewView внутри запаса сенсора по гироскопу. Выключено по
+     * умолчанию — сначала проверяем знак осей на устройстве.
+     */
+    private fun applyThmcPreviewStab() {
+        try {
+            if (camConfig.thmcPreviewStab) {
+                app.grapheneos.camera.thmc.ThmcGyro.start(this)
+                app.grapheneos.camera.thmc.ThmcPreviewStab.start(
+                    binding.preview,
+                    { camConfig.camera },
+                    {
+                        try { (camConfig.zoomState?.zoomRatio ?: 1f) * camConfig.thmcExtraZoom }
+                        catch (_: Throwable) { 1f }
+                    }
+                )
+            } else {
+                app.grapheneos.camera.thmc.ThmcPreviewStab.stop()
+            }
+        } catch (_: Throwable) {}
+    }
+
     fun refreshThmcModeBadge() {
         try {
             val badge: TextView = binding.thmcSceneBadge

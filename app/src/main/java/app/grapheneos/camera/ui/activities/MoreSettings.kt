@@ -355,6 +355,16 @@ open class MoreSettings : AppCompatActivity(), TextView.OnEditorActionListener {
         binding.thmcZoomStabSetting.setOnClickListener {
             thmcZoomStabToggle.performClick()
         }
+
+        // Стабилизация превью (EIS по гироскопу): только картинка, захват не трогаем.
+        val thmcPreviewStabToggle = binding.thmcPreviewStabToggle
+        thmcPreviewStabToggle.isChecked = camConfig.thmcPreviewStab
+        thmcPreviewStabToggle.setOnClickListener {
+            camConfig.thmcPreviewStab = thmcPreviewStabToggle.isChecked
+        }
+        binding.thmcPreviewStabSetting.setOnClickListener {
+            thmcPreviewStabToggle.performClick()
+        }
         // Глобальная доводка текстуры: твой алгоритм, отдельная стадия после шумодава.
         val thmcGlobalRefineSetting = binding.thmcGlobalRefineSetting
         val thmcGlobalRefineToggle = binding.thmcGlobalRefineToggle

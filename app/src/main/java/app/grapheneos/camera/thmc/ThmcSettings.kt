@@ -46,6 +46,7 @@ class ThmcSettings(private val store: KvStore) {
         const val GLOBAL_REFINE = "thmc_global_refine"
         const val EXPERT_UI = "thmc_expert_ui"
         const val ZOOM_STAB = "thmc_zoom_stab"
+        const val PREVIEW_STAB = "thmc_preview_stab"
         const val PHOTO_RESOLUTION = "photo_resolution"
     }
 
@@ -62,6 +63,7 @@ class ThmcSettings(private val store: KvStore) {
         const val GLOBAL_REFINE = true
         const val EXPERT_UI = false
         const val ZOOM_STAB = true
+        const val PREVIEW_STAB = false
         const val HDR = false
         const val TRACK = true
         const val AUTO_SCENE = true
@@ -139,6 +141,14 @@ class ThmcSettings(private val store: KvStore) {
     var zoomStab: Boolean
         get() = store.getBoolean(Keys.ZOOM_STAB, Defaults.ZOOM_STAB)
         set(value) = store.putBoolean(Keys.ZOOM_STAB, value)
+
+    /**
+     * Стабилизация превью движением окна кропа (EIS). Только картинка превью;
+     * на захват не влияет. По умолчанию выкл — знак осей проверяется на устройстве.
+     */
+    var previewStab: Boolean
+        get() = store.getBoolean(Keys.PREVIEW_STAB, Defaults.PREVIEW_STAB)
+        set(value) = store.putBoolean(Keys.PREVIEW_STAB, value)
 
     var autoEv: Boolean
         get() = store.getBoolean(Keys.AUTO_EV, Defaults.AUTO_EV)
