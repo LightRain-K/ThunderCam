@@ -423,19 +423,24 @@ object ThmcHdr {
                             ) ?: ThmcMerge.mergeWeighted(aligned, weights)
                         } else {
                             // 2 кадра РАЗНЫХ экспозиций усреднять нельзя: если фьюжн
-                            // недоступен, честно берём опорный (0EV) кадр.
-                            aligned[baseIdx]
+                            // недоступен, честно берём опорный (0EV) кадр — копией,
+                            // чтобы рабочие кадры можно было освободить ниже.
+                            aligned[baseIdx].copy(Bitmap.Config.ARGB_8888, false) ?: aligned[baseIdx]
                         }
                 }
                 dMerge = (System.nanoTime() - t) / 1_000_000
                 mark("merge")
-                for (b in aligned) if (b !== merged && b !in bmps) ThmcBitmaps.release(b)
+                // Кропы алайнмента — view на пиксели рабочих кадров: не в пул.
+                for (b in aligned) if (b !== merged && b !in bmps) ThmcBitmaps.recycleQuietly(b)
                 mergedBmp = merged
             } else {
                 mergedBmp = sharpAll.copy(Bitmap.Config.ARGB_8888, false) ?: sharpAll
                 detailBase = frames.getOrNull(srcIdx.getOrNull(bmps.indexOf(sharpAll)) ?: -1)
                 mark("single")
             }
+            // 12-Мп этап ниже (P0 + апскейл + перенос деталей + энкод) — самый
+            // жадный по памяти. Рабочие кадры больше не нужны: освобождаем сейчас.
+            try { for (b in bmps) if (b !== mergedBmp) ThmcBitmaps.recycleQuietly(b) } catch (_: Throwable) {}
             // P0 на РАБОЧЕМ разрешении, один апскейл ПОСЛЕ (было два upscale + P0 на 12Мп).
             val cc = camConfig
             val nightSingle = darkNight && good.size < 2

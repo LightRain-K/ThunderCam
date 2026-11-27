@@ -1,14 +1,27 @@
 version: 2
+
+# Форк сильно кастомный (натив + OpenCV + TFLite): ежедневные мажорные апдейты
+# только шумят. Раз в неделю, немного PR, мажоры критичных зависимостей — вручную.
 updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: daily
-    target-branch: main
-    open-pull-requests-limit: 20
+      interval: weekly
+    open-pull-requests-limit: 5
+
   - package-ecosystem: gradle
     directory: "/"
     schedule:
-      interval: daily
-    target-branch: main
-    open-pull-requests-limit: 20
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "org.opencv:opencv"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "com.android.tools.build:gradle"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.jetbrains.kotlin:kotlin-gradle-plugin"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.jetbrains.kotlin:kotlin-stdlib"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.tensorflow:tensorflow-lite"
+        update-types: ["version-update:semver-major"]

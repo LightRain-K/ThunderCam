@@ -297,11 +297,20 @@ object ThmcNight {
         val firstL = try {
             com.example.thundercam20.analysis.FastGray.of(bmps[0], 160).mean() / 255f
         } catch (_: Throwable) { 0f }
+        // 12-Мп этап (перенос деталей + энкод) — самый жадный по памяти.
+        // Рабочие кадры больше не нужны: освобождаем ДО него (список оставляем,
+        // чтобы счётчики в тостах остались прежними; recycle идемпотентен).
+        fun freeWorkFrames(keep: Bitmap? = null) {
+            try {
+                for (b in bmps) if (b !== keep) ThmcBitmaps.recycleQuietly(b)
+            } catch (_: Throwable) {}
+        }
         if (firstL > 0.55f) {
             val sharpAll = com.example.thundercam20.multiframe.FrameSelector().selectSharpest(bmps)
             val single = sharpAll.copy(Bitmap.Config.ARGB_8888, false) ?: sharpAll
             val singleSrc = frames.getOrNull(srcIdx.getOrNull(bmps.indexOf(sharpAll)) ?: -1)
             mark("daylight-single")
+            freeWorkFrames(single)
             saveWithP0(
                 imageCapturer, single, frames[frames.size / 2], quality, seq,
                 detailBase = singleSrc, detailCrop = null, workW = workW, workH = workH, noise = 8f
@@ -328,6 +337,7 @@ object ThmcNight {
                 val single = sharpAll.copy(Bitmap.Config.ARGB_8888, false) ?: sharpAll
                 val singleSrc = frames.getOrNull(srcIdx.getOrNull(bmps.indexOf(sharpAll)) ?: -1)
                 mark("single")
+                freeWorkFrames(single)
                 saveWithP0(
                     imageCapturer, single, frames[frames.size / 2], quality, seq,
                     detailBase = singleSrc, detailCrop = null, workW = workW, workH = workH, noise = 8f
@@ -371,7 +381,10 @@ object ThmcNight {
             val merged = ThmcMerge.mergeWiener(aligned, baseIdx, noise = noiseNight, rejectThr = 28)
             val dMerge = (System.nanoTime() - t) / 1_000_000
             mark("merge")
-            for (b in aligned) if (b !== merged && b !in bmps) ThmcBitmaps.release(b)
+            // Кропы алайнмента — view на пиксели рабочих кадров: в пул их отдавать
+            // нельзя (не конфигурируются под inBitmap), только снять ссылку.
+            for (b in aligned) if (b !== merged && b !in bmps) ThmcBitmaps.recycleQuietly(b)
+            freeWorkFrames()
             progress(imageCapturer, "Ночь P0")
             val tP0s = System.nanoTime()
             // Лучший вид: merged уже рабочего размера — P0 на нём, апскейл внутри saveWithP0.

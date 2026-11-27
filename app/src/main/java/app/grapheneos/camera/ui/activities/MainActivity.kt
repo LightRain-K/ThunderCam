@@ -937,6 +937,11 @@ open class MainActivity : AppCompatActivity(),
         previewLoader = binding.previewLoading
         processingBadge = binding.processingBadge
         seriesStatus = binding.seriesStatus
+        // Серия (ночь/HDR) отменяется тапом по статусу — не нужно ждать до конца.
+        seriesStatus.isClickable = true
+        seriesStatus.setOnClickListener {
+            try { imageCapturer.cancelPendingCaptureRequest() } catch (_: Throwable) {}
+        }
         imagePreview = binding.imagePreview
         previewView = binding.preview
         previewView.scaleType = PreviewView.ScaleType.FIT_START
@@ -1394,7 +1399,8 @@ open class MainActivity : AppCompatActivity(),
      * cbText больше для серий не используем — длинные строки там разъезжаются.
      */
     fun showSeriesStatus(text: String) {
-        seriesStatus.text = text
+        // Тап по статусу отменяет серию: пользователь не должен ждать её до конца.
+        seriesStatus.text = "$text  ·  ${getString(R.string.thmc_series_cancel_hint)}"
         seriesStatus.visibility = View.VISIBLE
     }
 

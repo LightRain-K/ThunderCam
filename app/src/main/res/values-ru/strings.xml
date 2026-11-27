@@ -411,4 +411,5 @@
 
     <string name="thmc_badge_on">Улучшение</string>
     <string name="thmc_badge_off">Улучшение выкл</string>
+    <string name="thmc_series_cancel_hint">тап — отменить</string>
 </resources>

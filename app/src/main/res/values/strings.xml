@@ -433,4 +433,5 @@
 
     <string name="thmc_badge_on">Enhancement</string>
     <string name="thmc_badge_off">Enhancement off</string>
+    <string name="thmc_series_cancel_hint">tap to cancel</string>
 </resources>
